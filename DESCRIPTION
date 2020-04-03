@@ -1,0 +1,22 @@
+Package: ppnwp
+Title: Post-Process Numerical Weather Prediction ensembles
+Version: 0.0.0.9000
+Author: person("Kate", "Doubleday", email = "kate.doubleday@nrel.gov",
+                  role = c("aut", "cre"))
+Maintainer: Kate Doubleday <kate.doubleday@nrel.gov>  
+Description: This package (or set of scripts) contains run scripts
+	that build off of the forecasting package to post-process
+	numerical weather prediction ensembles. This includes hand-holding
+	functions to preprocess data to the right format, loop over a 
+	series of forecasts to postprocess each in turn, and output 
+	forecast quantiles of the postprocessed forecasts. 
+Depends: R (>= 3.5.3),
+	forecasting
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports: 
+  uuid,
+	here,
+	lubridate,
+	R.utils

@@ -1,0 +1,88 @@
+#' Get time-series forecast using EMOS post-processing of NWP ensembles
+#'
+#' This method trains EMOS models for each time-point using a sliding or
+#' time-of-day training method, then forecasts using the current
+#' NWP ensemble.
+#' @family ts_training_forecast
+#' @param t_idx_series Series of time indices to forecast, relative to the
+#'   all_site_tel time indices
+#' @param ens_test [time x member] matrix of ensemble data for test period
+#' @param ens_data [site x member x time] array of all ensemble data (historical
+#'   + test)
+#' @param all_site_tel A [site x time] matrix of telemetry
+#' @param sun_up A [site x time] matrix of booleans
+#' @param site String, site name
+#' @param AC_rating Site's AC power rating
+#' @param metadata A data.frame of forecast parameters
+#' @return A ts_forecast object
+#' @export
+get_emos_ts <- function(t_idx_series, ens_test, ens_data, all_site_tel, sun_up,
+                        sites, site_idx, site_max_p, metadata){
+
+  # Train
+  models <- train_emos(t_idx_series, ens_data, all_site_tel, sun_up, sites,
+                       site_idx, site_max_p, metadata)
+  # Forecast
+  ts <- forecasting::ts_forecast(ens_test, metadata$date_benchmark_start,
+                    time_step=metadata$resolution, scale='site',
+                    location=paste("Site", site, sep=" "),
+                    method = 'emos', MoreTSArgs = list(model=models),
+                    max_power=AC_rating)
+  return(ts)
+}
+
+#' Subfunction to get EMOS models using sliding or time-of-day training
+#'
+#' @param t_idx_series Series of time indices to forecast, relative to the
+#'   all_site_tel time indices
+#' @param ens_test [time x member] matrix of ensemble data for test period
+#' @param all_site_tel A [site x time] matrix of telemetry
+#' @param sun_up A [site x time] matrix of booleans
+#' @param site String, site name
+#' @param AC_rating Site's AC power rating
+#' @param metadata A data.frame of forecast parameters
+train_emos <- function(t_idx_series, ens_data, all_site_tel, sun_up, sites,
+                       site_idx, site_max_p, metadata) {
+  tictoc::tic("Total EMOS model fit time: ")
+
+  models <- vector(mode="list", length=length(t_idx_series)) # initalize empty list
+
+  # Cycle through time_points in the benchmark. Use for loop rather than
+  # apply in order to feed last model into next one.
+  for (i in seq_along(t_idx_series)) {
+    # For first time point, use default initial parameter values for optim.
+    # Else, re-use the last time point. Is last point is NA, defaults will be reused
+    if (i == 1) { par_init <- NA} else {par_init <- models[[i-1]]}
+
+    model <- tryCatch({
+      # Skip training if sun is down
+      if (!any(sun_up[site_idx, t_idx_series[i]])) {
+        model <- NA
+      } else {
+        if (metadata$forecast_type == "sliding_emos") {
+          time_idx_train <- sort(t_idx_series[i] - seq_len(metadata$training_window))
+        } else {  # metadata$forecast_type == "time-of-day"
+          time_idx_train <- sort(t_idx_series[i] + c(-365*ts_per_day + seq(-ts_per_day*metadata$training_window, length.out = 2*metadata$training_window+1, by=+ts_per_day),
+                                                     seq(-ts_per_day, length.out = metadata$training_window, by=-ts_per_day)))
+        }
+        # Subset. No normalization as in BMA training.
+        ens_subset <- t(ens_data[site_idx, , time_idx_train[sun_up[site_idx, time_idx_train]]])
+        tel_subset <- all_site_tel[site_idx, time_idx_train[sun_up[site_idx, time_idx_train]]]
+        # Do not train if data is missing. There must be at least 2 data points for regression and observations can't be 0 only.
+        if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {
+          model <- NA
+        } else {
+          model <- emos_model(tel_subset, ens_subset, max_power=AC_rating, par_init=par_init)
+        }
+      }
+    }, error = function(e) {
+      e$message <- paste(e$message, "in training time index", t_idx_series[i], "for site", site)
+      # browser()
+      stop(e)
+    })
+    models[[i]] <- model
+  }
+
+  tictoc::toc()
+  return(models)
+}
