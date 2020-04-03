@@ -2,7 +2,7 @@
 
 export(add_metrics_to_dataframe)
 export(export_metrics_to_csv)
-export(forecast_by_site)
+export(forecast_by_issue_time)
 export(get_binned_ts)
 export(get_bma_ts)
 export(get_chpeen_ts)

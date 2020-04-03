@@ -15,7 +15,7 @@
 #' @param lm_formula Formula for BMA linear regression
 #' @param runtime_data_dir Directory to save .Rdata results
 #' @export
-forecast_by_site <- function(t_idx_series, ens_data, all_site_tel,
+forecast_by_issue_time <- function(t_idx_series, ens_data, all_site_tel,
                              sun_up, site, AC_rating, metadata,
                              lm_formula, runtime_data_dir){
 
