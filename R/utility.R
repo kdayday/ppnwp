@@ -69,7 +69,6 @@ get_maxar_data <- function(nc, members, site, metadata, date_start,
   ndays <- get_ndays(date_start, metadata$date_benchmark_end)
   start_day <- get_start_day(date_data_start, date_start)
 
-
   if (metadata$is_rolling) {
 
     dim_counts <- c(ndays, metadata$ts_per_day, 1, 1, 1)
@@ -84,7 +83,9 @@ get_maxar_data <- function(nc, members, site, metadata, date_start,
     # Get a [time x member] matrix at this site
     # (time is rolling along day, hour)
     data <- sapply(members, FUN = member_data, simplify ="array")
-    data[which(data > site_max_power)] <- site_max_power
+    if (truncate) {
+      data[which(data > site_max_power)] <- site_max_power
+    }
 
     # Reformat to [day x issue x step x member] format, but use
     # only a single day/issue time so that metrics for entire
