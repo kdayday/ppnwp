@@ -1,67 +1,84 @@
-#' Load data from a NETCDF file of ensemble forecasts Assumed file dimensions:
-#' Day x Hour x Site x Lead time x Ensemble member Returns an array of data:
-#' [site x member x time] or [site x member x time x lead time] Site selection
-#' and member selection can all be vectors of non-consecutive values Time-point
-#' selection is a consecutive sequence
+#' Load ensemble forecast data
+#'
+#' Loads in ensemble forecast data into the form: [day x issue x step x member]
+#'
+#' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
+#' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
+#' the form above or in a "rolling" format over the course of the year in the
+#' form [1 x 1 x all steps x member] to make annual average metrics easier
+#'
+#' If input file in in ECMWF format, assumes a NETCDF file of the dimensions:
+#' [day x issue x step x member]
+#'
 #' @param fname file name
 #' @param members A vector of member indices
-#' @param sites A vector of sites
-#' @param lead_times Forecast lead time or a set of lead times
+#' @param site Site index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
 #' @param date_start A lubridate: Start date of data to load
-#' @param date_end A lubridate: End date of data to load
-#' @param date_data_start A lubridate: Date of first day in file
-#' @param truncate Boolean: Whether or not to truncate the forecasts at the site
-#'   maximum power
-#' @param site_max_power A vector of the maximum power at ALL sites (not just
-#'   those listed in sites)
+#' @param ... Additional parameters to load-in subfunctions
 #' @export
-
-# TODO UPDATE
-
-
-
-
-get_forecast_data <- function(format, ...) {
+get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 
   # Open file
   nc <- ncdf4::nc_open(fname)
 
-  # TODO CAN i PUT A TRY CATCH BLOCK AROUNDT THIS?
-
-  # Is this Maxar's format?
-  if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
-    data <- get_maxar_data(, ...)
-  } else stop("Unrecognized forecast file format")
-  # TODO ADD ECMWF OPTION
-
-  # Close the file!
-  ncdf4::nc_close(nc)
+  data = tryCatch({
+    # Is this Maxar's format?
+    if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
+      data <- get_maxar_data(nc, members, site, metadata, date_start, ...)
+    } else stop("Unrecognized forecast file format; ECMWF format not implemented")
+    # TODO ADD ECMWF OPTION
+  },  finally = {
+    # Close the file!
+    ncdf4::nc_close(nc)
+  })
 
   return(data)
 }
 
-get_maxar_data <- function(nc, members, site,  date_start, date_end,
-                           update_rate, horizon, lead_time,
-                          date_data_start=lubridate::ymd(20160101),
-                          ts_per_day=24, vname="powernew", truncate=F,
-                          site_max_power=NULL, is_rolling=F) {
+#' Subfunction to load in ECMWF data
+#'
+#' Loads in ensemble forecast data into the form: [day x issue x step x member]
+#' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
+#' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
+#' the form above or in a "rolling" format over the course of the year in the
+#' form [1 x 1 x all steps x member] to make annual average metrics easier
+#' @param nc An open NetCDF object
+#' @param members A vector of member indices
+#' @param site Site index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param date_start A lubridate: Start date of data to load
+#' @param vname
+#' @param truncate Boolean: Whether or not to truncate the forecasts at the site
+#'   maximum power
+#' @param date_data_start A lubridate: Date of first day in file
+#' @param site_max_power A vector of the maximum power at ALL sites (not just
+#'   those listed in sites)
+get_maxar_data <- function(nc, members, site, metadata, date_start,
+                           vname="powernew", truncate=T,
+                           date_data_start=lubridate::ymd(20160101),
+                           site_max_power=NULL) {
 
-  check_maxar_parameters(nc, horizon, update_rate, lead_time, date_start)
+  check_maxar_parameters(nc, metadata, site)
 
   if (truncate & is.null(site_max_power)) stop("Site maximum power required to truncate forecasts.")
 
   # Calculate netcdf date constants
-  ndays <- get_ndays(date_start,date_end)
+  ndays <- get_ndays(date_start, metadata$date_benchmark_end)
   start_day <- get_start_day(date_data_start, date_start)
 
-  if (is_rolling) {
 
-    dim_counts <- c(ndays, ts_per_day, 1, 1, 1)
+  if (metadata$is_rolling) {
+
+    dim_counts <- c(ndays, metadata$ts_per_day, 1, 1, 1)
 
     # Get a matrix for this member, site, and lead time
     member_data <- function(member) {
-      dim_starts <- c(start_day,1, site, lead_time, member)
-      return(as.vector(t(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts))))
+      dim_starts <- c(start_day,1, site, metadata$lead_time, member)
+      return(as.vector(t(ncdf4::ncvar_get(nc, varid=vname,
+                                          start=dim_starts, count=dim_counts))))
     }
 
     # Get a [time x member] matrix at this site
@@ -79,13 +96,16 @@ get_maxar_data <- function(nc, members, site,  date_start, date_end,
     get_data_by_horizon <- function(i, issue, member) {
       # Hours are 1-24, not 0-23
       return(data_rectangle[get_ndays(date_start, issue),
-                            hour(issue) + 1, lead_time + i - 1, member])
+                            hour(issue) + 1, metadata$lead_time + i - 1,
+                            member])
     }
     get_data_by_issue <- function(member) {
       return(sapply(as.list(seq(from=as.POSIXlt(date_start),
-                                to=as.POSIXlt(date_end + days(1) - hours(update_rate)),
-                                by=paste(update_rate, "hours"))),
-                    FUN = function(issue, member) {sapply(1:horizon, FUN=get_data_by_horizon,
+                                to=as.POSIXlt(metadata$date_benchmark_end + days(1) -
+                                                hours(metadata$update_rate)),
+                                by=paste(metadata$update_rate, "hours"))),
+                    FUN = function(issue, member) {sapply(1:metadata$horizon,
+                                                          FUN=get_data_by_horizon,
                                                           issue=issue, member=member)},
                     member=member, simplify="array"))
     }
@@ -93,18 +113,18 @@ get_maxar_data <- function(nc, members, site,  date_start, date_end,
     tictoc::tic("Ensemble load-in time along the diagonal")
     # Get the minimum rectangle of data from the NetCDF that contains the desired data,
     # to be extracted along the diagonals of the matrix
-    dim_counts <- c(ndays, ts_per_day, 1, horizon, max(members))
-    dim_starts <- c(start_day, 1, site, lead_time, 1)
+    dim_counts <- c(ndays, metadata$ts_per_day, 1, metadata$horizon, max(members))
+    dim_starts <- c(start_day, 1, site, metadata$lead_time, 1)
     # [days x hours x lead time x member]
     data_rectangle <- array(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts),
-                            dim=c(ndays, ts_per_day, horizon, max(members)))
+                            dim=c(ndays, metadata$ts_per_day, metadata$horizon, max(members)))
 
     data <- sapply(members, FUN=get_data_by_issue, simplify="array")
     tictoc::toc()
 
     # [step x issue (rolling) x member] to [day x issue (per day) x step x member]
-    data <- aperm(array(aperm(data, perm = c(1,3,2)), dim=c(horizon, length(members),
-                                                        ts_per_day/update_rate, ndays)),
+    data <- aperm(array(aperm(data, perm = c(1,3,2)), dim=c(metadata$horizon, length(members),
+                                                            metadata$ts_per_day/metadata$update_rate, ndays)),
                   perm=c(4,3,1,2))
   }
   return(data)
@@ -114,12 +134,19 @@ get_ecmwf_data <- function() {
   stop("Not implemented")
 }
 
-checK_maxar_parameters <- function(nc, update_rate, resolution, horizon) {
-  if (update_rate < 1 || update_rate%%1!=0) {stop("Update rate must be hourly, by at least 1 hour")}
-  if (resolution !=1) stop("Maxar lookup function assemes resolution of 1 hour.")
-  if (horizon%%resolution!=0) stop("horizon must be a multiple of resolution")
-  if (horizon > nc$dim[[4]]$len) stop("Horizon cannot be longer than available lead times in Maxar matrix")
-  stop("not implemented")
+#' Subfunction to error-check temporal parameters for Maxar load-in
+#'
+#' @param nc An open NetCDF object
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param site Site index
+check_maxar_parameters <- function(nc, metadata, site) {
+  if (metadata$update_rate < 1 || metadata$update_rate%%1!=0) {stop("Update rate must be hourly, by at least 1 hour")}
+  if (metadata$resolution !=1) stop("Maxar lookup function assemes resolution of 1 hour.")
+  if (metadata$horizon%%metadata$resolution!=0) stop("horizon must be a multiple of resolution")
+  if (metadata$horizon > nc$dim[[4]]$len) stop("Horizon cannot be longer than available lead times in Maxar matrix")
+  # TODO CHECK
+  if (!(site %in% nc$dim[[3]]$vals)) stop("Site index not valid")
 }
 
 #' Calculate number of days in the sequence
