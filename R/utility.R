@@ -50,10 +50,11 @@ get_maxar_data <- function(nc, members, site,  date_start, date_end,
 
   if (truncate & is.null(site_max_power)) stop("Site maximum power required to truncate forecasts.")
 
+  # Calculate netcdf date constants
+  ndays <- get_ndays(date_start,date_end)
+  start_day <- get_start_day(date_data_start, date_start)
+
   if (is_rolling) {
-    # Calculate netcdf date constants
-    ndays <- get_ndays(date_start,date_end)
-    start_day <- get_start_day(date_data_start, date_start)
 
     dim_counts <- c(ndays, ts_per_day, 1, 1, 1)
 
@@ -74,32 +75,38 @@ get_maxar_data <- function(nc, members, site,  date_start, date_end,
     data <- array(data, dim=c(1, 1, ndays*ts_per_day, length(members)))
   } else {
 
-    dim_counts <- c(1, 1, 1, 1, 1)
-
+    # Define subfunction
     get_data_by_horizon <- function(i, issue, member) {
-       # Hours are 1-24, not 0-23
-       dim_starts <- c(floor(get_start_day(date_data_start, issue)),
-                       hour(issue) + 1, site, lead_time + i - 1, member)
-       return(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts))
-     }
-
+      # Hours are 1-24, not 0-23
+      return(data_rectangle[get_ndays(date_start, issue),
+                            hour(issue) + 1, lead_time + i - 1, member])
+    }
     get_data_by_issue <- function(member) {
-      return(sapply(as.list(seq(from=as.POSIXlt(date_start), to=as.POSIXlt(date_end),
+      return(sapply(as.list(seq(from=as.POSIXlt(date_start),
+                                to=as.POSIXlt(date_end + days(1) - hours(update_rate)),
                                 by=paste(update_rate, "hours"))),
                     FUN = function(issue, member) {sapply(1:horizon, FUN=get_data_by_horizon,
                                                           issue=issue, member=member)},
-                    member=member, simplify="array")
-      )
+                    member=member, simplify="array"))
     }
 
-    tictoc::tic("Ensemble load-in time along the diagonal;")
+    tictoc::tic("Ensemble load-in time along the diagonal")
+    # Get the minimum rectangle of data from the NetCDF that contains the desired data,
+    # to be extracted along the diagonals of the matrix
+    dim_counts <- c(ndays, ts_per_day, 1, horizon, max(members))
+    dim_starts <- c(start_day, 1, site, lead_time, 1)
+    # [days x hours x lead time x member]
+    data_rectangle <- array(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts),
+                            dim=c(ndays, ts_per_day, horizon, max(members)))
+
     data <- sapply(members, FUN=get_data_by_issue, simplify="array")
     tictoc::toc()
 
-    # [horizon x issue x member]
-
+    # [step x issue (rolling) x member] to [day x issue (per day) x step x member]
+    data <- aperm(array(aperm(data, perm = c(1,3,2)), dim=c(horizon, length(members),
+                                                        ts_per_day/update_rate, ndays)),
+                  perm=c(4,3,1,2))
   }
-
   return(data)
 }
 
