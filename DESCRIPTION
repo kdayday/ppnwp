@@ -20,3 +20,6 @@ Imports:
 	here,
 	lubridate,
 	R.utils
+Suggests: 
+  abind,
+  testthat

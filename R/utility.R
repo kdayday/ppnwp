@@ -93,24 +93,6 @@ get_maxar_data <- function(nc, members, site, metadata, date_start,
     data <- array(data, dim=c(1, 1, ndays*ts_per_day, length(members)))
   } else {
 
-    # Define subfunction
-    get_data_by_horizon <- function(i, issue, member) {
-      # Hours are 1-24, not 0-23
-      return(data_rectangle[get_ndays(date_start, issue),
-                            hour(issue) + 1, metadata$lead_time + i - 1,
-                            member])
-    }
-    get_data_by_issue <- function(member) {
-      return(sapply(as.list(seq(from=as.POSIXlt(date_start),
-                                to=as.POSIXlt(metadata$date_benchmark_end + days(1) -
-                                                hours(metadata$update_rate)),
-                                by=paste(metadata$update_rate, "hours"))),
-                    FUN = function(issue, member) {sapply(1:metadata$horizon,
-                                                          FUN=get_data_by_horizon,
-                                                          issue=issue, member=member)},
-                    member=member, simplify="array"))
-    }
-
     tictoc::tic("Ensemble load-in time along the diagonal")
     # Get the minimum rectangle of data from the NetCDF that contains the desired data,
     # to be extracted along the diagonals of the matrix
@@ -120,15 +102,41 @@ get_maxar_data <- function(nc, members, site, metadata, date_start,
     data_rectangle <- array(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts),
                             dim=c(ndays, metadata$ts_per_day, metadata$horizon, max(members)))
 
-    data <- sapply(members, FUN=get_data_by_issue, simplify="array")
+    data <- sapply(members, FUN=get_maxar_data_by_issue, data_rectangle=data_rectangle,
+                   date_start=date_start, metadata=metadata, simplify="array")
     tictoc::toc()
 
     # [step x issue (rolling) x member] to [day x issue (per day) x step x member]
-    data <- aperm(array(aperm(data, perm = c(1,3,2)), dim=c(metadata$horizon, length(members),
-                                                            metadata$ts_per_day/metadata$update_rate, ndays)),
+    data <- aperm(array(aperm(data, perm = c(1,3,2)),
+                        dim=c(metadata$horizon, length(members),
+                              metadata$ts_per_day/metadata$update_rate, ndays)),
                   perm=c(4,3,1,2))
   }
   return(data)
+}
+
+# Define subfunction
+# Presumes 1-hour resolution of indices in data_rectangle
+get_maxar_data_by_horizon <- function(h, issue, member, data_rectangle,
+                                      date_start, metadata) {
+
+  return(data_rectangle[get_ndays(date_start, issue) + floor(h/metadata$ts_per_day),
+                        (lubridate::hour(issue) + metadata$lead_time + h -2 )%%metadata$ts_per_day + 1,
+                        h, member])
+}
+get_maxar_data_by_issue <- function(member, data_rectangle,
+                                    date_start, metadata) {
+  return(sapply(as.list(seq(from=as.POSIXlt(date_start),
+                            to=as.POSIXlt(metadata$date_benchmark_end +
+                                            lubridate::days(1) -
+                                            lubridate::hours(metadata$update_rate)),
+                            by=paste(metadata$update_rate, "hours"))),
+                FUN = function(issue, member) {sapply(1:metadata$horizon,
+                                                      FUN=get_maxar_data_by_horizon,
+                                                      issue=issue, member=member,
+                                                      data_rectangle=data_rectangle,
+                                                      date_start=date_start, metadata=metadata)},
+                member=member, simplify="array"))
 }
 
 get_ecmwf_data <- function() {
@@ -144,9 +152,8 @@ get_ecmwf_data <- function() {
 check_maxar_parameters <- function(nc, metadata, site) {
   if (metadata$update_rate < 1 || metadata$update_rate%%1!=0) {stop("Update rate must be hourly, by at least 1 hour")}
   if (metadata$resolution !=1) stop("Maxar lookup function assemes resolution of 1 hour.")
-  if (metadata$horizon%%metadata$resolution!=0) stop("horizon must be a multiple of resolution")
+  if (metadata$horizon%%metadata$resolution!=0) stop("Horizon must be a multiple of resolution")
   if (metadata$horizon > nc$dim[[4]]$len) stop("Horizon cannot be longer than available lead times in Maxar matrix")
-  # TODO CHECK
   if (!(site %in% nc$dim[[3]]$vals)) stop("Site index not valid")
 }
 
