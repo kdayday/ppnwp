@@ -50,7 +50,7 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
 #' @param date_start A lubridate: Start date of data to load
-#' @param vname
+#' @param vname NetCDF variable name
 #' @param truncate Boolean: Whether or not to truncate the forecasts at the site
 #'   maximum power
 #' @param date_data_start A lubridate: Date of first day in file
@@ -115,8 +115,17 @@ get_maxar_data <- function(nc, members, site, metadata, date_start,
   return(data)
 }
 
-# Define subfunction
-# Presumes 1-hour resolution of indices in data_rectangle
+#' Subfunction to get single data point by issue and horizon
+#'
+#' Presumes 1-hour resolution of indices in data_rectangle
+#' @param h Horizon index
+#' @param issue A lubridate: issue time and hour
+#' @param member Member index
+#' @param data_rectangle Array of data from the NetCDF file
+#' @param date_start A lubridate: Start date of data to load
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @keywords internal
 get_maxar_data_by_horizon <- function(h, issue, member, data_rectangle,
                                       date_start, metadata) {
 
@@ -124,6 +133,15 @@ get_maxar_data_by_horizon <- function(h, issue, member, data_rectangle,
                         (lubridate::hour(issue) + metadata$lead_time + h -2 )%%metadata$ts_per_day + 1,
                         h, member])
 }
+
+#' Subfunction to get diagonal data by issue time
+#'
+#' @param member Member index
+#' @param data_rectangle Array of data from the NetCDF file
+#' @param date_start A lubridate: Start date of data to load
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @keywords internal
 get_maxar_data_by_issue <- function(member, data_rectangle,
                                     date_start, metadata) {
   return(sapply(as.list(seq(from=as.POSIXlt(date_start),
