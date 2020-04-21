@@ -26,9 +26,9 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
   data = tryCatch({
     # Is this Maxar's format?
     if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
-      data <- get_maxar_data(nc, members, site, metadata, date_start, ...)
+      data <- get_maxar_ensemble(nc, members, site, metadata, date_start, ...)
     } else stop("Unrecognized forecast file format; ECMWF format not implemented")
-    # TODO ADD ECMWF OPTION
+    # TODO Megan to add ECMWF option
   },  finally = {
     # Close the file!
     ncdf4::nc_close(nc)
@@ -54,16 +54,15 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 #' @param truncate Boolean: Whether or not to truncate the forecasts at the site
 #'   maximum power
 #' @param date_data_start A lubridate: Date of first day in file
-#' @param site_max_power A vector of the maximum power at ALL sites (not just
-#'   those listed in sites)
-get_maxar_data <- function(nc, members, site, metadata, date_start,
+#' @param AC_rating AC power rating
+get_maxar_ensemble <- function(nc, members, site, metadata, date_start,
                            vname="powernew", truncate=T,
                            date_data_start=lubridate::ymd(20160101),
-                           site_max_power=NULL) {
+                           AC_rating=NULL) {
 
   check_maxar_parameters(nc, metadata, site)
 
-  if (truncate & is.null(site_max_power)) stop("Site maximum power required to truncate forecasts.")
+  if (truncate & is.null(AC_rating)) stop("Site maximum power required to truncate forecasts.")
 
   # Calculate netcdf date constants
   ndays <- get_ndays(date_start, metadata$date_benchmark_end)
@@ -84,7 +83,7 @@ get_maxar_data <- function(nc, members, site, metadata, date_start,
     # (time is rolling along day, hour)
     data <- sapply(members, FUN = member_data, simplify ="array")
     if (truncate) {
-      data[which(data > site_max_power)] <- site_max_power
+      data[which(data > AC_rating)] <- AC_rating
     }
 
     # Reformat to [day x issue x step x member] format, but use
@@ -158,6 +157,7 @@ get_maxar_data_by_issue <- function(member, data_rectangle,
 }
 
 get_ecmwf_data <- function() {
+  # TODO Megan to implement
   stop("Not implemented")
 }
 
@@ -173,6 +173,62 @@ check_maxar_parameters <- function(nc, metadata, site) {
   if (metadata$horizon%%metadata$resolution!=0) stop("Horizon must be a multiple of resolution")
   if (metadata$horizon > nc$dim[[4]]$len) stop("Horizon cannot be longer than available lead times in Maxar matrix")
   if (!(site %in% nc$dim[[3]]$vals)) stop("Site index not valid")
+}
+
+#' Get a vector of telemetry data
+#'
+#' Selects either Maxar or NSRDB format and loads data vector
+#' Time-point selection is a consecutive sequence
+#' @param fname file name
+#' @param site Site index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param date_start A lubridate: Start date of data to load
+#' @return A vector of telemetry
+#' @export
+get_telemetry_data <- function(fname, site, metadata, date_start, ...) {
+
+  # Open file
+  nc <- ncdf4::nc_open(fname)
+
+  data = tryCatch({
+    # Is this Maxar's format?
+    if (all(names(nc$dim)==c('Day', 'Hour', 'SiteID'))){
+      data <- get_maxar_telemetry(nc, site, metadata, date_start, ...)
+    } else stop("Unrecognized forecast file format; NSRDB format not implemented")
+    # TODO Megan to add NSRDB option
+  },  finally = {
+    # Close the file!
+    ncdf4::nc_close(nc)
+  })
+
+}
+
+#' Load data from a NETCDF file of telemetry
+#'
+#' Assumed file dimensions: Day x Hour x Site
+#' Time-point selection is a consecutive sequence
+#' @param nc Open NetCDF file
+#' @param site Site index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param date_start A lubridate: Start date of data to load
+#' @param date_data_start A lubridate: Date of first day in file
+#' @param vname NetCDF variable name
+#' @return A vector of telemetry
+#' @export
+get_maxar_telemetry <- function(nc, site, metadata, date_start,
+                                date_data_start=lubridate::ymd(20160101),
+                                vname="hsl_power") {
+
+  # Calculate netcdf date constants
+  ndays <- get_ndays(date_start, metadata$date_benchmark_end)
+  start_day <- get_start_day(date_data_start, date_start)
+  dim_counts <- c(ndays, metadata$ts_per_day, 1)
+
+  data <- ncdf4::ncvar_get(nc, varid=vname, start=c(start_day,1,site), count=dim_counts)
+
+  return(as.vector(t(data)))
 }
 
 #' Calculate number of days in the sequence
