@@ -59,5 +59,7 @@ forecast_by_issue_time <- function(t_idx_series, ens_data, all_site_tel,
   # Save the run time data in R
   data_fname <- paste("data site ", site, ".RData", sep="")
 
-  save(ts, tel_test, ens_test, runtime, file=file.path(runtime_data_dir, data_fname))
+  # In the future, this may be moved out so all forecasts are saved in single file
+  save(ts, tel_test, ens_test, runtime, AC_rating, file=file.path(runtime_data_dir, data_fname))
+
 }

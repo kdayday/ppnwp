@@ -1,21 +1,17 @@
 #' Export forecasting metrics to .csv
 #'
-#' Cycles through site-level forecasts to assess metrics, including CRPS
-#' (weighted and unweighted) and data quality metrics. If "export_plots" is
-#' selected, this will generate reliability, sharpness, quantile score, and PIT
-#' histogram plots *for each site*.
+#' Cycles through forecasts in the runtime_data_dir (presumably organized by
+#' site) to assess metrics, including CRPS (weighted and unweighted) and data
+#' quality metrics. If "export_plots" is selected, this will generate
+#' reliability, sharpness, quantile score, and PIT histogram plots *for each
+#' site*.
 #' @param out_dir Main output directory to save graphs
 #' @param runtime_data_dir Directory where .Rdata results are saved
-#' @param sites Vector of sites that are being forecast in this simulations
-#' @param site_idx Index of which site is currently being forecasted, relative
-#'   to the order in all_site_tel
-#' @param site_max_p A vector of maximum AC power rating for all sites in this
-#'   dataset, regardless of which subset in "sites" is being simulated
 #' @param metadata A data.frame of forecast parameters
 #' @param export_plots Boolean flag (default=False)
 #' @export
-export_metrics_to_csv <- function(out_dir, runtime_data_dir, sites,
-                                  site_max_p, metadata, export_plots=F){
+export_metrics_to_csv <- function(out_dir, runtime_data_dir,
+                                   metadata, export_plots=F){
 
   df <- data.frame()
   if (export_plots) {
@@ -32,27 +28,28 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir, sites,
     dir.create(pit_dir, showWarnings = FALSE)
   }
 
-  for(s in seq_along(sites)){
+  files <- list.files(runtime_data_dir)
 
-    # Load in ts, tel_test, ens_test
-    load(file.path(runtime_data_dir , paste("data site ", sites[s], ".RData", sep="")))
+  for(f in seq_along(files)){
 
-    df <- add_metrics_to_dataframe(df, ts, tel_test, s, site_max_p[sites[s]],
+    # Load in ts, tel_test, ens_test, AC_rating
+    load(file.path(runtime_data_dir , files[f]))
+
+    df <- add_metrics_to_dataframe(df, ts, tel_test, f, AC_rating,
                                   metadata$forecast_type, runtime)
 
     if (export_plots) {
       plot_reliability(ts, tel_test,
-                       fname=file.path(rel_dir, paste("Site", sites[i], "reliability.pdf", sep="_")))
+                       fname=file.path(rel_dir, paste("Site", ts$location, "reliability.pdf", sep="_")))
       plot_quantile_score(ts, tel_test,
-                          fname=file.path(qs_dir, paste("Site", sites[i], "qs.pdf", sep="_")))
+                          fname=file.path(qs_dir, paste("Site", ts$location, "qs.pdf", sep="_")))
       plot_PIT_histogram(ts, tel_test, nbins=20,
-                         fname=file.path(pit_dir, paste("Site", sites[i], "PIT.pdf", sep="_")))
-      plot_interval_width(ts, tel_test, normalize.by=site_max_p[sites[i]],
-                          fname=file.path(iw_dir, paste("Site", sites[i], "interval_width.pdf", sep="_")))
+                         fname=file.path(pit_dir, paste("Site", ts$location, "PIT.pdf", sep="_")))
+      plot_interval_width(ts, tel_test, normalize.by=AC_rating,
+                          fname=file.path(iw_dir, paste("Site", ts$location, "interval_width.pdf", sep="_")))
     }
   }
 
-  rownames(df) <- sites
   write.csv(df, file=file.path(out_dir, "metrics.csv"))
 }
 
@@ -70,6 +67,9 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir, sites,
 #' @export
 add_metrics_to_dataframe <- function(df, ts, tel_test, df_idx, AC_rating,
                                      forecast_type, runtime) {
+
+  # Name this row by site
+  rownames(df)[df_idx] <- ts$location
 
   df[df_idx, "Runtime [sec]"] <- runtime
 
