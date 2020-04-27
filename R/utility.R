@@ -15,10 +15,10 @@
 #' @param site Site index
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
-#' @param date_start A lubridate: Start date of data to load
+#' @param ensemble_issue_times A sequence of lubridate issue times
 #' @param ... Additional parameters to load-in subfunctions
 #' @export
-get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
+get_forecast_data <- function(fname, members, site, metadata, ensemble_issue_times, ...) {
 
   # Open file
   nc <- ncdf4::nc_open(fname)
@@ -26,7 +26,7 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
   data = tryCatch({
     # Is this Maxar's format?
     if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
-      data <- get_maxar_ensemble(nc, members, site, metadata, date_start, ...)
+      data <- get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times, ...)
     } else stop("Unrecognized forecast file format; ECMWF format not implemented")
     # TODO Megan to add ECMWF option
   },  finally = {
@@ -49,13 +49,13 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 #' @param site Site index
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
-#' @param date_start A lubridate: Start date of data to load
+#' @param ensemble_issue_times A sequence of lubridate issue times
 #' @param vname NetCDF variable name
 #' @param truncate Boolean: Whether or not to truncate the forecasts at the site
 #'   maximum power
 #' @param date_data_start A lubridate: Date of first day in file
 #' @param AC_rating AC power rating
-get_maxar_ensemble <- function(nc, members, site, metadata, date_start,
+get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times,
                            vname="powernew", truncate=T,
                            date_data_start=lubridate::ymd(20160101),
                            AC_rating=NULL) {
@@ -65,8 +65,8 @@ get_maxar_ensemble <- function(nc, members, site, metadata, date_start,
   if (truncate & is.null(AC_rating)) stop("Site maximum power required to truncate forecasts.")
 
   # Calculate netcdf date constants
-  ndays <- get_ndays(date_start, metadata$date_benchmark_end)
-  start_day <- get_start_day(date_data_start, date_start)
+  ndays <- length(ensemble_issue_times)/(24/metadata$update_rate)
+  start_day <- get_start_day(date_data_start, ensemble_issue_times[[1]])
 
   if (metadata$is_rolling) {
 
@@ -102,7 +102,7 @@ get_maxar_ensemble <- function(nc, members, site, metadata, date_start,
                             dim=c(ndays, metadata$ts_per_day, metadata$horizon, max(members)))
 
     data <- sapply(members, FUN=get_maxar_data_by_issue, data_rectangle=data_rectangle,
-                   date_start=date_start, metadata=metadata, simplify="array")
+                   ensemble_issue_times=ensemble_issue_times, metadata=metadata, simplify="array")
     tictoc::toc()
 
     # [step x issue (rolling) x member] to [day x issue (per day) x step x member]
@@ -137,22 +137,19 @@ get_maxar_data_by_horizon <- function(h, issue, member, data_rectangle,
 #'
 #' @param member Member index
 #' @param data_rectangle Array of data from the NetCDF file
-#' @param date_start A lubridate: Start date of data to load
+#' @param ensemble_issue_times A sequence of lubridate issue times
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
 #' @keywords internal
 get_maxar_data_by_issue <- function(member, data_rectangle,
-                                    date_start, metadata) {
-  return(sapply(as.list(seq(from=as.POSIXlt(date_start),
-                            to=as.POSIXlt(metadata$date_benchmark_end +
-                                            lubridate::days(1) -
-                                            lubridate::hours(metadata$update_rate)),
-                            by=paste(metadata$update_rate, "hours"))),
+                                    ensemble_issue_times, metadata) {
+  return(sapply(as.list(ensemble_issue_times),
                 FUN = function(issue, member) {sapply(1:metadata$horizon,
                                                       FUN=get_maxar_data_by_horizon,
                                                       issue=issue, member=member,
                                                       data_rectangle=data_rectangle,
-                                                      date_start=date_start, metadata=metadata)},
+                                                      date_start=ensemble_issue_times[[1]],
+                                                      metadata=metadata)},
                 member=member, simplify="array"))
 }
 
