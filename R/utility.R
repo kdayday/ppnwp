@@ -234,7 +234,7 @@ get_maxar_telemetry <- function(nc, site, metadata, date_start,
 #' @return Number of days in requested data sequence
 #' @export
 get_ndays <- function(date_start,date_end) {
-  lubridate::interval(date_start, date_end)/days(1) + 1
+  floor(lubridate::interval(date_start, date_end)/days(1) + 1)
 }
 
 #' Calculate start day's index since the beginning of data availability
@@ -243,5 +243,5 @@ get_ndays <- function(date_start,date_end) {
 #' @return Index number of first requested day
 #' @export
 get_start_day <- function(date_data_start, date_start){
-  lubridate::interval(date_data_start, date_start)/days(1) + 1
+  floor(lubridate::interval(date_data_start, date_start)/days(1) + 1)
 }
