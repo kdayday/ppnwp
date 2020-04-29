@@ -15,7 +15,7 @@ get_binned_ts <- function(ens_test, site, AC_rating, metadata){
   # Forecast
   ts <- forecasting::ts_forecast(ens_test, metadata$date_benchmark_start,
                     time_step=metadata$resolution, scale='site',
-                    location=paste("Site", site, sep=" "),
+                    location=site,
                     method = 'binned',
                     max_power=AC_rating)
   return(ts)

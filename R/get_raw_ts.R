@@ -8,14 +8,14 @@
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
-get_raw_ts <- function(ens_test, sites, site_idx, site_max_p, metadata){
+get_raw_ts <- function(ens_test, site, AC_rating, metadata){
 
   # No Training
 
   # Forecast
   ts <- forecasting::ts_forecast(ens_test, metadata$date_benchmark_start,
                     time_step=metadata$resolution, scale='site',
-                    location=paste("Site", site, sep=" "),
+                    location=site,
                     method = 'empirical',
                     max_power=AC_rating)
   return(ts)

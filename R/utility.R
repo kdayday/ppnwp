@@ -1,6 +1,7 @@
 #' Load ensemble forecast data
 #'
 #' Loads in ensemble forecast data into the form: [day x issue x step x member]
+#' Also generates a list of validtime timestamps
 #'
 #' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 #' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
@@ -15,15 +16,28 @@
 #' @param site Site index
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
-#' @param ensemble_issue_times A sequence of lubridate issue times
+#' @param date_start Timestamp
 #' @param ... Additional parameters to load-in subfunctions
+#' @return A list of data=[day x issue x step x member] matrix and issuetime=a
+#'   vector of POSIXct timestamps
 #' @export
-get_forecast_data <- function(fname, members, site, metadata, ensemble_issue_times, ...) {
+get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
+
+  if (metadata$is_rolling) {
+    ensemble_issue_times <- date_start
+  } else {
+    # All issue times in the data set, which may include some training data
+    ensemble_issue_times <- seq(from=as.POSIXlt(date_start),
+                                to=as.POSIXlt(metadata$date_benchmark_end +
+                                                lubridate::days(1) -
+                                                lubridate::hours(metadata$update_rate)),
+                                by=paste(metadata$update_rate, "hours"))
+  }
 
   # Open file
   nc <- ncdf4::nc_open(fname)
 
-  data = tryCatch({
+  data <- tryCatch({
     # Is this Maxar's format?
     if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
       data <- get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times, ...)
@@ -34,7 +48,7 @@ get_forecast_data <- function(fname, members, site, metadata, ensemble_issue_tim
     ncdf4::nc_close(nc)
   })
 
-  return(data)
+  return(list(data=data, issuetime=ensemble_issue_times))
 }
 
 #' Subfunction to load in ECMWF data
@@ -105,11 +119,8 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
                    ensemble_issue_times=ensemble_issue_times, metadata=metadata, simplify="array")
     tictoc::toc()
 
-    # [step x issue (rolling) x member] to [day x issue (per day) x step x member]
-    data <- aperm(array(aperm(data, perm = c(1,3,2)),
-                        dim=c(metadata$horizon, length(members),
-                              metadata$ts_per_day/metadata$update_rate, ndays)),
-                  perm=c(4,3,1,2))
+    # [step x issue (rolling) x member] to [issue (rolling) x step x member]
+    data <- aperm(data, perm=c(2,1,3))
   }
   return(data)
 }
@@ -181,14 +192,14 @@ check_maxar_parameters <- function(nc, metadata, site) {
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
 #' @param date_start A lubridate: Start date of data to load
-#' @return A vector of telemetry
+#' @return A list of data=vector of telemetry and validtime=vector of POSIXct times
 #' @export
 get_telemetry_data <- function(fname, site, metadata, date_start, ...) {
 
   # Open file
   nc <- ncdf4::nc_open(fname)
 
-  data = tryCatch({
+  data <- tryCatch({
     # Is this Maxar's format?
     if (all(names(nc$dim)==c('Day', 'Hour', 'SiteID'))){
       data <- get_maxar_telemetry(nc, site, metadata, date_start, ...)
@@ -199,6 +210,10 @@ get_telemetry_data <- function(fname, site, metadata, date_start, ...) {
     ncdf4::nc_close(nc)
   })
 
+  timestamps <- seq(date_start, length.out = length(data),
+                              by = paste(metadata$resolution, "hour"))
+
+  return(list(data=data, validtime=timestamps))
 }
 
 #' Load data from a NETCDF file of telemetry
