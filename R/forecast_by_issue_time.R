@@ -9,7 +9,7 @@
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A [day x issue x step] matrix of booleans
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters

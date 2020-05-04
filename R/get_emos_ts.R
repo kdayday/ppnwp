@@ -12,7 +12,7 @@
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -41,7 +41,7 @@ get_emos_ts <- function(t_idx_series, ens_test, ensemble, telemetry, sun_up,
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -60,7 +60,7 @@ train_emos <- function(t_idx_series, ensemble, telemetry, sun_up, site,
 
     model <- tryCatch({
       # Skip training if sun is down
-      if (!any(sun_up[site_idx, t_idx_series[i]])) {
+      if (!sun_up[t_idx_series[i]]) {
         model <- NA
       } else {
         if (metadata$forecast_type == "sliding_emos") {
@@ -69,9 +69,10 @@ train_emos <- function(t_idx_series, ensemble, telemetry, sun_up, site,
           time_idx_train <- sort(t_idx_series[i] + c(-365*ts_per_day + seq(-ts_per_day*metadata$training_window, length.out = 2*metadata$training_window+1, by=+ts_per_day),
                                                      seq(-ts_per_day, length.out = metadata$training_window, by=-ts_per_day)))
         }
+        time_idx_train <- time_idx_train[sun_up[time_idx_train]]
         # Subset. No normalization as in BMA training.
         ens_subset <- t(ens_data[site_idx, , time_idx_train[sun_up[site_idx, time_idx_train]]])
-        tel_subset <- all_site_tel[site_idx, time_idx_train[sun_up[site_idx, time_idx_train]]]
+        tel_subset <- telemetry$data[time_idx_train]
         # Do not train if data is missing. There must be at least 2 data points for regression and observations can't be 0 only.
         if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {
           model <- NA

@@ -8,7 +8,7 @@
 #'   telemetry time indices
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -38,7 +38,7 @@ get_peen_ts <- function(t_idx_series, telemetry, sun_up, site,
 #'   telemetry time indices
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param metadata A data.frame of forecast parameters
 train_peen_data <- function(t_idx_series, telemetry, sun_up, metadata) {
   # Cycle through time_points in the benchmark
@@ -49,7 +49,7 @@ train_peen_data <- function(t_idx_series, telemetry, sun_up, metadata) {
 }
 
 train_peen_subfunc <- function(time_idx_forecast, telemetry, sun_up, metadata) {
-  if (!sun_up[site_idx, time_idx_forecast]) {
+  if (!sun_up[time_idx_forecast]) {
     return(rep(0, times=metadata$training_window))
   } else {
     indices <- c()

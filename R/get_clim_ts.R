@@ -6,7 +6,7 @@
 #' @family ts_training_forecast
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -17,9 +17,9 @@ get_clim_ts <- function(telemetry, sun_up, site, AC_rating, metadata){
   warning("Climatology treats each issue time as a separate training set.")
 
   # Train
-  valid_idx <- sun_up[site_idx, ] & !is.na(tel_test)
-  data.input <- t(sapply(sun_up[site_idx, ],
-                         FUN=function(m) if (m) tel_test[valid_idx]
+  valid_idx <- sun_up & !is.na(telemetry$data)
+  data.input <- t(sapply(sun_up,
+                         FUN=function(m) if (m) telemetry$data[valid_idx]
                          else rep(0, times=sum(valid_idx)), simplify="array"))
 
   # Forecast

@@ -12,7 +12,7 @@
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -50,7 +50,7 @@ get_bma_ts <- function(t_idx_series, ens_test, ensemble, telemetry, sun_up,
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -76,7 +76,7 @@ train_bma <- function(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -85,7 +85,7 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
                               site, AC_rating, metadata, lm_formula) {
   model <- tryCatch({
     # Skip training if sun is down
-    if (!any(sun_up[site_idx, time_idx_forecast])) {
+    if (!sun_up[time_idx_forecast]) {
       model <- NA
     } else {
       if (metadata$forecast_type == "sliding") {
@@ -121,7 +121,7 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
-#' @param sun_up A [site x time] matrix of booleans
+#' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
@@ -141,7 +141,7 @@ train_constant_bma <- function(t_idx_series, ensemble, telemetry, sun_up,
                           maxiter=200, eps=1e-4, percent_clipping_threshold=metadata$percent_clipping_threshold)
   tictoc::toc()
   # Cycle through time_points in the benchmark
-  bma_models <- lapply(t_idx_series, FUN=function(t) {if (!any(sun_up[site_idx, t])) {return(NA)} else {model}})
+  bma_models <- lapply(t_idx_series, FUN=function(t) {if (!sun_up[t]) {return(NA)} else {model}})
   tictoc::toc()
   return(bma_models)
 }
