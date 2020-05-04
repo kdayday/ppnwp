@@ -79,14 +79,6 @@ ens_name <- args$ensemble_file
 tel_name <- args$telemetry_file
 group_directory <- args$group_directory
 
-if (metadata$is_rolling) {
-  if (metadata$lead_time > 0) stop("Use lead time of 0 for correct rolling forecast logic.")
-  if (metadata$horizon != metadata$update_rate) stop("Use equal horizon and update rate for rolling forecast")
-}
-# ------------------------------------------------------
-# Calculate or load remaining constants
-# ------------------------------------------------------
-
 # Time constants
 date_training_start <- switch(metadata$forecast_type,
                               "raw" = metadata$date_benchmark_start, # No training period
@@ -100,9 +92,12 @@ date_training_start <- switch(metadata$forecast_type,
                               "time-of-day" = metadata$date_benchmark_start - years(1) - days(metadata$training_window),
                               "time-of-day_emos" = metadata$date_benchmark_start - years(1) - days(metadata$training_window),
                               stop("unknown forecast type"))
-ndays <- get_ndays(metadata$date_benchmark_start, metadata$date_benchmark_end)
 
 metadata$ts_per_day <- 24/metadata$resolution
+
+# ------------------------------------------------------
+# Set up directories
+# ------------------------------------------------------
 
 forecast_name <- switch(metadata$forecast_type,
                         "sliding" = paste("Discrete-", metadata$bma_distribution, " BMA forecast with sliding window", sep=""),

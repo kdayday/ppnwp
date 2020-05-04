@@ -177,9 +177,16 @@ get_ecmwf_data <- function() {
 #' @param site Site index
 check_maxar_parameters <- function(nc, metadata, site) {
   if (metadata$update_rate < 1 || metadata$update_rate%%1!=0) {stop("Update rate must be hourly, by at least 1 hour")}
-  if (metadata$resolution !=1) stop("Maxar lookup function assemes resolution of 1 hour.")
-  if (metadata$horizon%%metadata$resolution!=0) stop("Horizon must be a multiple of resolution")
-  if (metadata$horizon > nc$dim[[4]]$len) stop("Horizon cannot be longer than available lead times in Maxar matrix")
+  if (metadata$resolution !=1) stop("Maxar lookup function assumes resolution of 1 hour.")
+  if (metadata$is_rolling) {
+    if (metadata$lead_time > 0) stop("Use lead time of 0 for correct rolling forecast logic.")
+    if (metadata$horizon != metadata$update_rate) stop("Use equal horizon and update rate for rolling forecast.")
+    ndays <- get_ndays(metadata$date_benchmark_start, metadata$date_benchmark_end)
+    if (metadata$horizon != ndays*metadata$ts_per_day) stop("Horizon must be consistent with start/end dates for rolling forecast.")
+  } else {
+    if (metadata$horizon%%metadata$resolution!=0) stop("Horizon must be a multiple of resolution")
+    if (metadata$horizon > nc$dim[[4]]$len) stop("Horizon cannot be longer than available lead times in Maxar matrix")
+  }
   if (!(site %in% nc$dim[[3]]$vals)) stop("Site index not valid")
 }
 

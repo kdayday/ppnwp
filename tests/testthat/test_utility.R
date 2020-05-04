@@ -55,16 +55,38 @@ test_that('check_maxar_parameters throws errors', {
                                       site=NaN), "Maxar lookup*")
   expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=1,
                                                             resolution=1,
-                                                            horizon=2.5),
-                                      site=NaN), "Horizon must*")
+                                                            lead_time=1,
+                                                            is_rolling=T),
+                                      site=NaN), "Use lead*")
+  expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=10,
+                                                            resolution=1,
+                                                            lead_time=0,
+                                                            horizon=5,
+                                                            is_rolling=T),
+                                      site=NaN), "Use equal*")
+  expect_error(check_maxar_parameters(nc=NaN,
+                                      metadata=list(update_rate=10, resolution=1,
+                                                    lead_time=0, horizon=10,
+                                                    is_rolling=T,
+                                                    ts_per_day=24,
+                                                    date_benchmark_start=as.POSIXlt(lubridate::ymd_h("20100101_00")),
+                                                    date_benchmark_end=as.POSIXlt(lubridate::ymd(20100101))),
+                                      site=NaN), "Horizon must be consistent*")
+  expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=1,
+                                                            resolution=1,
+                                                            horizon=2.5,
+                                                            is_rolling=F),
+                                      site=NaN), "Horizon must be a multiple*")
   expect_error(check_maxar_parameters(nc=list(dim=list(NaN, NaN, list(vals=1:3), list(len=4))),
                                       metadata=list(update_rate=1,
                                                     resolution=1,
-                                                    horizon=5),
+                                                    horizon=5,
+                                                    is_rolling=F),
                                       site=NaN), "Horizon cannot*")
   expect_error(check_maxar_parameters(nc=list(dim=list(NaN, NaN, list(vals=c(1,2,4)), list(len=4))), metadata=list(update_rate=1,
                                                                                            resolution=1,
-                                                                                           horizon=2),
+                                                                                           horizon=2,
+                                                                                           is_rolling=F),
                                       site=3), "Site*")
 
 })
@@ -94,14 +116,14 @@ test_that('issue_2_valid_index with 0 lead time (rolling) is correct', {
 test_that('valid_2_issue_index with default issue time is correct', {
   valid <- lubridate::ymd_h("20010101_18")
   metadata <- list(resolution=1, lead_time=1, update_rate=6, horizon=18)
-  ensemble <- list(issuetime=seq(from=as.POSIXlt(issue), by="6 hours", length.out=4))
+  ensemble <- list(issuetime=seq(from=as.POSIXlt(lubridate::ymd("20010101")), by="6 hours", length.out=4))
   expect_equal(valid_2_issue_index(valid, metadata, ensemble), c(3, 6))
 })
 
 test_that('valid_2_issue_index with given issue time is correct', {
+  issue <- as.POSIXlt(lubridate::ymd("20010101"))
   valid <- lubridate::ymd_h("20010101_18")
   metadata <- list(resolution=1, lead_time=1, update_rate=6, horizon=18)
   ensemble <- list(issuetime=seq(from=as.POSIXlt(issue), by="6 hours", length.out=4))
-  issue <- as.POSIXlt(lubridate::ymd("20010101"))
   expect_equal(valid_2_issue_index(valid, metadata, ensemble, issue=issue), c(1, 18))
 })
