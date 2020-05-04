@@ -4,13 +4,18 @@
 \alias{train_constant_bma}
 \title{Subfunction to get single, constant BMA model for all time-points}
 \usage{
-train_constant_bma(t_idx_series, ens_data, all_site_tel, sun_up, site,
+train_constant_bma(t_idx_series, ensemble, telemetry, sun_up, site,
   AC_rating, metadata, lm_formula)
 }
 \arguments{
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{ensemble}{A list of data=[issue x step x member] array of all
+ensemble data (historical + test) and issuetime=vector of POSIXct time
+stamps}
 
-\item{sun_up}{A [site x time] matrix of booleans}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
+
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{site}{String, site name}
 
@@ -21,8 +26,6 @@ train_constant_bma(t_idx_series, ens_data, all_site_tel, sun_up, site,
 \item{lm_formula}{Formula for BMA linear regression}
 
 \item{time_idx_forecast}{Time index}
-
-\item{ens_test}{[time x member] matrix of ensemble data for test period}
 }
 \description{
 Subfunction to get single, constant BMA model for all time-points

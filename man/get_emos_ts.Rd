@@ -4,27 +4,29 @@
 \alias{get_emos_ts}
 \title{Get time-series forecast using EMOS post-processing of NWP ensembles}
 \usage{
-get_emos_ts(t_idx_series, ens_test, ens_data, all_site_tel, sun_up, sites,
-  site_idx, site_max_p, metadata)
+get_emos_ts(t_idx_series, ens_test, ensemble, telemetry, sun_up, site,
+  AC_rating, metadata)
 }
 \arguments{
 \item{t_idx_series}{Series of time indices to forecast, relative to the
-all_site_tel time indices}
+telemetry time indices}
 
 \item{ens_test}{[time x member] matrix of ensemble data for test period}
 
-\item{ens_data}{[site x member x time] array of all ensemble data (historical
-+ test)}
+\item{ensemble}{A list of data=[issue x step x member] array of all
+ensemble data (historical + test) and issuetime=vector of POSIXct time
+stamps}
 
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
 
-\item{sun_up}{A [site x time] matrix of booleans}
-
-\item{metadata}{A data.frame of forecast parameters}
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{site}{String, site name}
 
 \item{AC_rating}{Site's AC power rating}
+
+\item{metadata}{A data.frame of forecast parameters}
 }
 \value{
 A ts_forecast object

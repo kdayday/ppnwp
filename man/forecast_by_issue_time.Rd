@@ -4,19 +4,20 @@
 \alias{forecast_by_issue_time}
 \title{Conduct site-level forecasting with the desired method}
 \usage{
-forecast_by_issue_time(t_idx_series, ens_data, all_site_tel, sun_up, site,
-  AC_rating, metadata, lm_formula, runtime_data_dir)
+forecast_by_issue_time(issue, ensemble, telemetry, sun_up, site, AC_rating,
+  metadata, lm_formula, runtime_data_dir)
 }
 \arguments{
-\item{t_idx_series}{Series of time indices to forecast, relative to the
-all_site_tel time indices}
+\item{issue}{A lubridate time stamp of the issue time}
 
-\item{ens_data}{[site x member x time] array of all ensemble data (historical
-+ test)}
+\item{ensemble}{A list of data=[issue x step x member] array of all
+ensemble data (historical + test) and issuetime=vector of POSIXct time
+stamps}
 
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
 
-\item{sun_up}{A [site x time] matrix of booleans}
+\item{sun_up}{A [day x issue x step] matrix of booleans}
 
 \item{site}{String, site name}
 

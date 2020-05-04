@@ -4,24 +4,27 @@
 \alias{train_emos}
 \title{Subfunction to get EMOS models using sliding or time-of-day training}
 \usage{
-train_emos(t_idx_series, ens_data, all_site_tel, sun_up, sites, site_idx,
-  site_max_p, metadata)
+train_emos(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating,
+  metadata)
 }
 \arguments{
 \item{t_idx_series}{Series of time indices to forecast, relative to the
-all_site_tel time indices}
+telemetry time indices}
 
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{ensemble}{A list of data=[issue x step x member] array of all
+ensemble data (historical + test) and issuetime=vector of POSIXct time
+stamps}
 
-\item{sun_up}{A [site x time] matrix of booleans}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
 
-\item{metadata}{A data.frame of forecast parameters}
-
-\item{ens_test}{[time x member] matrix of ensemble data for test period}
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{site}{String, site name}
 
 \item{AC_rating}{Site's AC power rating}
+
+\item{metadata}{A data.frame of forecast parameters}
 }
 \description{
 Subfunction to get EMOS models using sliding or time-of-day training

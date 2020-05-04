@@ -4,25 +4,26 @@
 \alias{get_clim_ts}
 \title{Get time-series forecast using climatology}
 \usage{
-get_clim_ts(tel_test, sun_up, sites, site_idx, site_max_p, metadata)
+get_clim_ts(telemetry, sun_up, site, AC_rating, metadata)
 }
 \arguments{
-\item{tel_test}{A vector of the test period telemetry for this site}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
 
-\item{sun_up}{A [site x time] matrix of booleans}
-
-\item{metadata}{A data.frame of forecast parameters}
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{site}{String, site name}
 
 \item{AC_rating}{Site's AC power rating}
+
+\item{metadata}{A data.frame of forecast parameters}
 }
 \value{
 A ts_forecast object
 }
 \description{
-This method generates a static forecast for all times when the sun is up,
-*based on the climatology of the test sample*, rather than a historical
+This method generates a static forecast for all times when the sun is up.
+The training telemetry could either be the test sample or a historical
 period.
 }
 \seealso{

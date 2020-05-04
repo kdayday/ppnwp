@@ -4,21 +4,23 @@
 \alias{get_bma_ts}
 \title{Get time-series forecast using BMA post-processing of NWP ensembles}
 \usage{
-get_bma_ts(t_idx_series, ens_test, ens_data, all_site_tel, sun_up, site,
+get_bma_ts(t_idx_series, ens_test, ensemble, telemetry, sun_up, site,
   AC_rating, metadata, lm_formula)
 }
 \arguments{
 \item{t_idx_series}{Series of time indices to forecast, relative to the
-all_site_tel time indices}
+telemetry time indices}
 
 \item{ens_test}{[time x member] matrix of ensemble data for test period}
 
-\item{ens_data}{[site x member x time] array of all ensemble data (historical
-+ test)}
+\item{ensemble}{A list of data=[issue x step x member] array of all
+ensemble data (historical + test) and issuetime=vector of POSIXct time
+stamps}
 
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
 
-\item{sun_up}{A [site x time] matrix of booleans}
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{site}{String, site name}
 

@@ -4,17 +4,18 @@
 \alias{train_ch_peen}
 \title{Subfunction to get input data for CH-PeEn forecast}
 \usage{
-train_ch_peen(t_idx_series, all_site_tel, sun_up, site_idx, metadata)
+train_ch_peen(t_idx_series, telemetry, sun_up, metadata)
 }
 \arguments{
 \item{t_idx_series}{Series of time indices to forecast, relative to the
-all_site_tel time indices}
+telemetry time indices}
 
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
+
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{metadata}{A data.frame of forecast parameters}
-
-\item{site}{String, site name}
 }
 \description{
 Get matrix of static, complete-history PeEn data

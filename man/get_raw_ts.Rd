@@ -4,16 +4,16 @@
 \alias{get_raw_ts}
 \title{Get time-series forecast of raw NWP ensemble}
 \usage{
-get_raw_ts(ens_test, sites, site_idx, site_max_p, metadata)
+get_raw_ts(ens_test, site, AC_rating, metadata)
 }
 \arguments{
 \item{ens_test}{[time x member] matrix of ensemble data for test period}
 
-\item{metadata}{A data.frame of forecast parameters}
-
 \item{site}{String, site name}
 
 \item{AC_rating}{Site's AC power rating}
+
+\item{metadata}{A data.frame of forecast parameters}
 }
 \value{
 A ts_forecast object

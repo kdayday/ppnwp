@@ -17,7 +17,7 @@ time-steps per day, rolling or not, etc.}
 \item{date_start}{A lubridate: Start date of data to load}
 }
 \value{
-A vector of telemetry
+A list of data=vector of telemetry and validtime=vector of POSIXct times
 }
 \description{
 Selects either Maxar or NSRDB format and loads data vector

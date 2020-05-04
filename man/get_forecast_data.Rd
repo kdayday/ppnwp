@@ -16,12 +16,17 @@ get_forecast_data(fname, members, site, metadata, date_start, ...)
 \item{metadata}{Metadata list including date end, temporal parameters,
 time-steps per day, rolling or not, etc.}
 
-\item{date_start}{A lubridate: Start date of data to load}
+\item{date_start}{Timestamp}
 
 \item{...}{Additional parameters to load-in subfunctions}
 }
+\value{
+A list of data=[day x issue x step x member] matrix and issuetime=a
+  vector of POSIXct timestamps
+}
 \description{
 Loads in ensemble forecast data into the form: [day x issue x step x member]
+Also generates a list of validtime timestamps
 }
 \details{
 If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day

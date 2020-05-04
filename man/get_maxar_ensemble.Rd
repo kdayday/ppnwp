@@ -4,9 +4,9 @@
 \alias{get_maxar_ensemble}
 \title{Subfunction to load in ECMWF data}
 \usage{
-get_maxar_ensemble(nc, members, site, metadata, date_start,
+get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times,
   vname = "powernew", truncate = T,
-  date_data_start = lubridate::ymd(20160101), site_max_power = NULL)
+  date_data_start = lubridate::ymd(20160101), AC_rating = NULL)
 }
 \arguments{
 \item{nc}{An open NetCDF object}
@@ -18,7 +18,7 @@ get_maxar_ensemble(nc, members, site, metadata, date_start,
 \item{metadata}{Metadata list including date end, temporal parameters,
 time-steps per day, rolling or not, etc.}
 
-\item{date_start}{A lubridate: Start date of data to load}
+\item{ensemble_issue_times}{A sequence of lubridate issue times}
 
 \item{vname}{NetCDF variable name}
 
@@ -27,8 +27,7 @@ maximum power}
 
 \item{date_data_start}{A lubridate: Date of first day in file}
 
-\item{site_max_power}{A vector of the maximum power at ALL sites (not just
-those listed in sites)}
+\item{AC_rating}{AC power rating}
 }
 \description{
 Loads in ensemble forecast data into the form: [day x issue x step x member]

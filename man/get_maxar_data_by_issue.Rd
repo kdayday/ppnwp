@@ -4,14 +4,15 @@
 \alias{get_maxar_data_by_issue}
 \title{Subfunction to get diagonal data by issue time}
 \usage{
-get_maxar_data_by_issue(member, data_rectangle, date_start, metadata)
+get_maxar_data_by_issue(member, data_rectangle, ensemble_issue_times,
+  metadata)
 }
 \arguments{
 \item{member}{Member index}
 
 \item{data_rectangle}{Array of data from the NetCDF file}
 
-\item{date_start}{A lubridate: Start date of data to load}
+\item{ensemble_issue_times}{A sequence of lubridate issue times}
 
 \item{metadata}{Metadata list including date end, temporal parameters,
 time-steps per day, rolling or not, etc.}

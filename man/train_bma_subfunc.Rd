@@ -5,15 +5,20 @@
 \title{Subfunction to get BMA model for individual time-point using sliding or
 time-of-day training}
 \usage{
-train_bma_subfunc(time_idx_forecast, ens_data, all_site_tel, sun_up, site,
+train_bma_subfunc(time_idx_forecast, ensemble, telemetry, sun_up, site,
   AC_rating, metadata, lm_formula)
 }
 \arguments{
 \item{time_idx_forecast}{Time index}
 
-\item{all_site_tel}{A [site x time] matrix of telemetry}
+\item{ensemble}{A list of data=[issue x step x member] array of all
+ensemble data (historical + test) and issuetime=vector of POSIXct time
+stamps}
 
-\item{sun_up}{A [site x time] matrix of booleans}
+\item{telemetry}{A list of data=vector of telemetry and validtime=vector of
+POSIXct times}
+
+\item{sun_up}{A vector of booleans, indexed by telemetry valid times}
 
 \item{site}{String, site name}
 
@@ -22,8 +27,6 @@ train_bma_subfunc(time_idx_forecast, ens_data, all_site_tel, sun_up, site,
 \item{metadata}{A data.frame of forecast parameters}
 
 \item{lm_formula}{Formula for BMA linear regression}
-
-\item{ens_test}{[time x member] matrix of ensemble data for test period}
 }
 \description{
 Subfunction to get BMA model for individual time-point using sliding or
