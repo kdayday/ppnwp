@@ -64,8 +64,8 @@ test_that('check_maxar_parameters throws errors', {
                                                     lead_time=0, horizon=10,
                                                     is_rolling=T,
                                                     ts_per_day=24,
-                                                    date_benchmark_start=as.POSIXlt(lubridate::ymd_h("20100101_00")),
-                                                    date_benchmark_end=as.POSIXlt(lubridate::ymd(20100101))),
+                                                    date_first_valid=as.POSIXlt(lubridate::ymd_h("20100101_00")),
+                                                    date_last_valid=as.POSIXlt(lubridate::ymd(20100101))),
                                       site=NaN), "Horizon must be consistent*")
   expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=1,
                                                             resolution=1,

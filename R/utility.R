@@ -27,10 +27,7 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
     ensemble_issue_times <- date_start
   } else {
     # All issue times in the data set, which may include some training data
-    ensemble_issue_times <- seq(from=as.POSIXlt(date_start),
-                                to=as.POSIXlt(metadata$date_benchmark_end +
-                                                lubridate::days(1) -
-                                                lubridate::hours(metadata$update_rate)),
+    ensemble_issue_times <- seq(from=date_start, to=metadata$date_last_valid,
                                 by=paste(metadata$update_rate, "hours"))
   }
 
@@ -82,7 +79,7 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
 
   if (metadata$is_rolling) {
 
-    ndays <- get_ndays(ensemble_issue_times[[1]], metadata$date_benchmark_end)
+    ndays <- get_ndays(ensemble_issue_times[[1]], metadata$date_last_valid)
     dim_counts <- c(ndays, metadata$ts_per_day, 1, 1, 1)
 
     # Get a matrix for this member, site, and lead time
@@ -102,10 +99,10 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
     # Reformat to [day x issue x step x member] format, but use
     # only a single day/issue time so that metrics for entire
     # year can be calculated all at once
-    data <- array(data, dim=c(1, 1, ndays*metadata$ts_per_day, length(members)))
+    data <- array(data, dim=c(1, ndays*metadata$ts_per_day, length(members)))
   } else {
 
-    ndays <- length(ensemble_issue_times)/(24/metadata$update_rate)
+    ndays <- ceiling(length(ensemble_issue_times)/(24/metadata$update_rate))
 
     tictoc::tic("Ensemble load-in time along the diagonal")
     # Get the minimum rectangle of data from the NetCDF that contains the desired data,
@@ -181,7 +178,7 @@ check_maxar_parameters <- function(nc, metadata, site) {
   if (metadata$resolution !=1) stop("Maxar lookup function assumes resolution of 1 hour.")
   if (metadata$is_rolling) {
     if (metadata$horizon != metadata$update_rate) stop("Use equal horizon and update rate for rolling forecast.")
-    ndays <- get_ndays(metadata$date_benchmark_start, metadata$date_benchmark_end)
+    ndays <- get_ndays(metadata$date_first_valid, metadata$date_last_valid)
     if (metadata$horizon != ndays*metadata$ts_per_day) stop("Horizon must be consistent with start/end dates for rolling forecast.")
   } else {
     if (metadata$horizon%%metadata$resolution!=0) stop("Horizon must be a multiple of resolution")
@@ -241,13 +238,15 @@ get_maxar_telemetry <- function(nc, site, metadata, date_start,
                                 vname="hsl_power") {
 
   # Calculate netcdf date constants
-  ndays <- get_ndays(date_start, metadata$date_benchmark_end)
+  ndays <- get_ndays(date_start, metadata$date_last_valid)
   start_day <- get_start_day(date_data_start, date_start)
   dim_counts <- c(ndays, metadata$ts_per_day, 1)
 
   data <- ncdf4::ncvar_get(nc, varid=vname, start=c(start_day,1,site), count=dim_counts)
+  data <- as.vector(t(data))[seq(hour(date_start)+1,
+                                 length.out=interval(date_start, metadata$date_last_valid)/hours(metadata$resolution)+1)]
 
-  return(as.vector(t(data)))
+  return(data)
 }
 
 #' Calculate number of days in the sequence

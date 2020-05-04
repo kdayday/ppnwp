@@ -25,8 +25,10 @@ library(lubridate)
 # members -> List of ensemble member indices to include.
 # site -> Power plant site index.
 # percent_clipping_threshold -> % of power plant rating to use as clipping threshold, (0,1)
-# date_benchmark_start -> Date to start the forecast benchmarking (yearmonthday). Date of training start will depend on the selected forecast_type.
-# date_benchmark_end -> Date to end the forecast benchmarking (yearmonthday).
+# date_first_issue -> First forecast issue time (ymd_h). For the rolling forecast, this equals the
+#                     start of the benchmark. Training data will be selected backwards from there.
+# date_last_valid -> Last valid time to include in the benchmark (ymd_h). The first valid time and last
+#                     issue time are backcalculated from date_first_issue, date_last_valid, and the temporal parameters.
 # training_window -> If a sliding window is used, the training window is a sliding windows in *hours*.
 #                 -> If a time-of-day window is used, the appropriate hour will be cherry picked from this number of *days* this year,
 #                     plus a window twice this length the year before
@@ -48,8 +50,8 @@ defaults <- list(forecast_type="sliding",
                  members = "1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41",
                  site = 1,
                  percent_clipping_threshold = 0.995,
-                 date_benchmark_start = "20180101_00",
-                 date_benchmark_end = "20180110", #"20181231",
+                 date_first_issue = "20171231_21",
+                 date_last_valid = "20180103_23", #"20181231",
                  training_window = 72,
                  lm_intercept = FALSE,
                  telemetry_file="telemetry.nc",
@@ -72,8 +74,8 @@ metadata$update_rate <- args$update_rate
 members <- as.numeric(unlist(strsplit(args$members, ",")))
 site <- args$site
 metadata$percent_clipping_threshold <- args$percent_clipping_threshold
-metadata$date_benchmark_start <- as.POSIXlt(lubridate::ymd_h(args$date_benchmark_start))
-metadata$date_benchmark_end <- as.POSIXlt(lubridate::ymd(args$date_benchmark_end))
+metadata$date_first_issue <- as.POSIXlt(lubridate::ymd_h(args$date_first_issue))
+metadata$date_last_valid <- as.POSIXlt(lubridate::ymd_h(args$date_last_valid))
 metadata$training_window <- args$training_window
 if (args$lm_intercept) {
   lm_formula <- y~x
@@ -82,18 +84,29 @@ ens_name <- args$ensemble_file
 tel_name <- args$telemetry_file
 group_directory <- args$group_directory
 
-# Time constants
+# ------------------------------------------------------
+# Calculate remaining temporal constants
+# ------------------------------------------------------
+
+metadata$date_first_valid <- if (metadata$is_rolling) {metadata$date_first_issue} else {
+metadata$date_first_issue + lubridate::hours(metadata$lead_time)
+}
+metadata$date_last_issue<- if (metadata$is_rolling) {NULL} else {
+  tail(seq(from=metadata$date_first_issue, to=metadata$date_last_valid,
+      by=paste(metadata$update_rate, "hours")),1)
+}
+
 date_training_start <- switch(metadata$forecast_type,
-                              "raw" = metadata$date_benchmark_start, # No training period
-                              "binned" = metadata$date_benchmark_start, # No training period
-                              "climate" = metadata$date_benchmark_start, # No training period
-                              "peen" = metadata$date_benchmark_start - 2*days(metadata$training_window), # Add an expanded window to ensure enough non-NA points are available
-                              "ch-peen" = metadata$date_benchmark_start-years(1),
-                              "constant_bma" = metadata$date_benchmark_start-years(1),
-                              "sliding" = metadata$date_benchmark_start - days(ceiling(metadata$training_window/24)),
-                              "sliding_emos" = metadata$date_benchmark_start - days(ceiling(metadata$training_window/24)),
-                              "time-of-day" = metadata$date_benchmark_start - years(1) - days(metadata$training_window),
-                              "time-of-day_emos" = metadata$date_benchmark_start - years(1) - days(metadata$training_window),
+                              "raw" = metadata$date_first_issue, # No training period
+                              "binned" = metadata$date_first_issue, # No training period
+                              "climate" = metadata$date_first_issue, # No training period
+                              "peen" = metadata$date_first_issue - 2*days(metadata$training_window), # Add an expanded window to ensure enough non-NA points are available
+                              "ch-peen" = metadata$date_first_issue-years(1),
+                              "constant_bma" = metadata$date_first_issue-years(1),
+                              "sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
+                              "sliding_emos" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
+                              "time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
+                              "time-of-day_emos" = metadata$date_first_issue - years(1) - days(metadata$training_window),
                               stop("unknown forecast type"))
 
 metadata$ts_per_day <- 24/metadata$resolution
@@ -142,10 +155,10 @@ ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
                               site, metadata, date_training_start,
                               AC_rating=AC_rating)
 
-
 # Load telemetry list, including data as data vector over time and a validtime vector
 telemetry <- get_telemetry_data(file.path(data_dir, tel_name), site,
-                                metadata, date_training_start)
+                                metadata,
+                                date_training_start + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)))
 
 tictoc::toc()
 
@@ -156,20 +169,18 @@ tictoc::tic("Full forecast and analysis runtime")
 
 warning("Might need to add new NA member handling because NA's no longer removed from input data by lead time.")
 
-# TODO PICK UP HERE TO TEST
-
 # Generate a [issue x step] estimation of whether the sun is up, to avoid forecasting when it is not
 # Continuing to test based on power for internal consistency with current ts_forecast practice
-# TODO CHECK NEW MARGIN
 sun_up <- apply(ensemble$data, MARGIN = c(1, 2), FUN = check_sunup)
-sun_up <- sapply(telemetry$validtime, FUN=function(valid) {
-  sun_up[valid_2_issue_index(valid, metadata, ensemble)]})
 
+# Translate sun_up to valid time and get issue times of the validation set
 if (metadata$is_rolling) {
-  issue_times <- metadata$date_benchmark_start
+  sun_up <- sun_up[1,]
+  issue_times <- metadata$date_training_start
 } else {
-  # Issue times of the validation set
-  issue_times <- ensemble$issuetime[which(ensemble$issuetime==metadata$date_benchmark_start):length(ensemble$issuetime)]
+  sun_up <- sapply(telemetry$validtime, FUN=function(valid) {
+    sun_up[valid_2_issue_index(valid, metadata, ensemble)]})
+  issue_times <- ensemble$issuetime[which(ensemble$issuetime==metadata$date_first_issue):length(ensemble$issuetime)]
 }
 
 # Conduct forecast for each issue time
