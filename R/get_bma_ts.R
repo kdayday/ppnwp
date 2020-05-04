@@ -95,7 +95,7 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
                                                      seq(-ts_per_day, length.out = metadata$training_window, by=-ts_per_day)))
       }
       # Subset right into normalize
-      ens_subset <- t(ens_data[site_idx, , time_idx_train]/AC_rating)
+      ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metadata)/AC_rating
       tel_subset <- telemetry$data[time_idx_train]/AC_rating
       # Do not train if data is missing. There must be at least 2 data points for regression and observations can't be 0 only.
       if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {return(NA)}
@@ -131,9 +131,9 @@ train_constant_bma <- function(t_idx_series, ensemble, telemetry, sun_up,
                                      lm_formula) {
   tictoc::tic("Total BMA model fit time: ")
 
-  ens_subset <- t(ens_data[site_idx, , 1:(t_start_idx-1)]/AC_rating)
   time_idx_train <- 1:(t_idx_series[1]-1)
 
+  ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metdata)/AC_rating
   tel_subset <- telemetry$data[time_idx_train]/AC_rating
   tictoc::tic("Single model model fit time: ")
   model <- bma_ens_models(tel_subset, ens_subset, bma_distribution=metadata$bma_distribution,

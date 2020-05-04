@@ -260,3 +260,48 @@ get_ndays <- function(date_start,date_end) {
 get_start_day <- function(date_data_start, date_start){
   floor(lubridate::interval(date_data_start, date_start)/days(1) + 1)
 }
+
+#' Translate telemetry valid time to ensemble issue/step indices
+#'
+#' @param valid A POSIXct timestamp of valid time
+#' @param metadata
+#' @param ensemble
+#' @param issue (optional) A POSIXct timestamp of issue time, defaults to most
+#'   recent forecast
+#' @return c(issue, step) indices of the ensemble$data vector
+valid_2_issue_index <- function(valid, metadata, ensemble, issue=NULL) {
+  # Find timestamp of most recent issue
+  if (is.null(issue)) {
+    issue_index <- max(which(ensemble$issuetime <=
+                               (valid-lubridate::hours(metadata$lead_time))))
+    issue <- ensemble$issuetime[issue_index]
+  } else {
+    issue_index <- which(issue == ensemble$issuetime)
+  }
+  step_index <- (valid - issue - lubridate::dhours(metadata$lead_time))/
+    lubridate::dhours(metadata$resolution) + 1
+  return(c(issue_index, step_index))
+}
+
+#' Translate ensemble issue time and step to telemetry valid time index
+#'
+#' @param issue A POSIXct timestamp of issue time
+#' @param step Index of forecast step in this run
+#' @param metadata
+#' @param telemetry
+#' @return an index of the telemetry$data vector
+issue_2_valid_index <- function(issue, step, metadata, telemetry) {
+  if (step < 1) stop("Step must be at least 1")
+  which(issue + lubridate::hours(metadata$lead_time + (step-1)*metadata$resolution)==
+          telemetry$validtime)
+}
+
+#' This function will need to be expanded for full functionality of non-rolling forecasts
+get_training_ensemble_from_validtimes <- function(time_idx_train, ensemble, metadata) {
+  if (metadata$is_rolling) {
+    # ensemble sizing is [1 x all steps x member]
+    return(ensemble$data[1, time_idx_train, ])
+  } else {
+    stop("Not implemented yet")
+  }
+}

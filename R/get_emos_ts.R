@@ -71,7 +71,7 @@ train_emos <- function(t_idx_series, ensemble, telemetry, sun_up, site,
         }
         time_idx_train <- time_idx_train[sun_up[time_idx_train]]
         # Subset. No normalization as in BMA training.
-        ens_subset <- t(ens_data[site_idx, , time_idx_train[sun_up[site_idx, time_idx_train]]])
+        ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metadata)
         tel_subset <- telemetry$data[time_idx_train]
         # Do not train if data is missing. There must be at least 2 data points for regression and observations can't be 0 only.
         if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {

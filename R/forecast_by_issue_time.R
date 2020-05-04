@@ -4,7 +4,7 @@
 #' training method and forecasts for the test period. Exports .Rdata file of
 #' results to the "Runtime data" directory
 #' @param issue A lubridate time stamp of the issue time
-#' @param ensemble A list of data=[day x issue x step x member] array of all
+#' @param ensemble A list of data=[issue x step x member] array of all
 #'   ensemble data (historical + test) and issuetime=vector of POSIXct time
 #'   stamps
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
@@ -22,12 +22,12 @@ forecast_by_issue_time <- function(issue, ensemble, telemetry,
 
   tictoc::tic(paste("Total computation time for site ", site, sep=''))
 
-  t_idx_series <- sapply(issue + hours(metadata$lead_time + 0:(metadata$horizon-1)*metadata$resolution),
-                         FUN=function(z) {which(z==telemetry$validtime)})
-  ens_test <- ensemble$data[which(issue==ensemble$issuetime), , ]
-  # TODO ALSO FIX site_index logic in get_bma_ts
+  # Define the series of time indices in the test period
+  t_idx_series <- sapply(1:metadata$horizon, FUN=issue_2_valid_index,
+                         issue=issue, metadata=metadata, telemetry=telemetry)
 
-  # TODO WHEN RETURN: FIX DOCUMENTATION IN _ts functions
+  ens_test <- ensemble$data[which(issue==ensemble$issuetime), , ]
+
 
   ts <- switch(metadata$forecast_type,
                "sliding"=get_bma_ts(t_idx_series, ens_test, ensemble, telemetry,
