@@ -103,7 +103,7 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
     # Reformat to [day x issue x step x member] format, but use
     # only a single day/issue time so that metrics for entire
     # year can be calculated all at once
-    data <- array(data, dim=c(1, 1, ndays*ts_per_day, length(members)))
+    data <- array(data, dim=c(1, 1, ndays*metadata$ts_per_day, length(members)))
   } else {
 
     tictoc::tic("Ensemble load-in time along the diagonal")

@@ -91,8 +91,9 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
       if (metadata$forecast_type == "sliding") {
         time_idx_train <- sort(time_idx_forecast - seq_len(metadata$training_window))
       } else {  # metadata$forecast_type == "time-of-day"
-        time_idx_train <- sort(time_idx_forecast + c(-365*ts_per_day + seq(-ts_per_day*metadata$training_window, length.out = 2*metadata$training_window+1, by=+ts_per_day),
-                                                     seq(-ts_per_day, length.out = metadata$training_window, by=-ts_per_day)))
+        time_idx_train <- sort(time_idx_forecast + c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
+                                                                                    length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
+                                                     seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
       }
       # Subset right into normalize
       ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metadata)/AC_rating

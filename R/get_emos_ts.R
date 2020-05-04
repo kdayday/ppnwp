@@ -66,8 +66,9 @@ train_emos <- function(t_idx_series, ensemble, telemetry, sun_up, site,
         if (metadata$forecast_type == "sliding_emos") {
           time_idx_train <- sort(t_idx_series[i] - seq_len(metadata$training_window))
         } else {  # metadata$forecast_type == "time-of-day"
-          time_idx_train <- sort(t_idx_series[i] + c(-365*ts_per_day + seq(-ts_per_day*metadata$training_window, length.out = 2*metadata$training_window+1, by=+ts_per_day),
-                                                     seq(-ts_per_day, length.out = metadata$training_window, by=-ts_per_day)))
+          time_idx_train <- sort(t_idx_series[i] + c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
+                                                                                    length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
+                                                     seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
         }
         time_idx_train <- time_idx_train[sun_up[time_idx_train]]
         # Subset. No normalization as in BMA training.
