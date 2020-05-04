@@ -78,12 +78,11 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
 
   if (truncate & is.null(AC_rating)) stop("Site maximum power required to truncate forecasts.")
 
-  # Calculate netcdf date constants
-  ndays <- length(ensemble_issue_times)/(24/metadata$update_rate)
   start_day <- get_start_day(date_data_start, ensemble_issue_times[[1]])
 
   if (metadata$is_rolling) {
 
+    ndays <- get_ndays(ensemble_issue_times[[1]], metadata$date_benchmark_end)
     dim_counts <- c(ndays, metadata$ts_per_day, 1, 1, 1)
 
     # Get a matrix for this member, site, and lead time
@@ -105,6 +104,8 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
     # year can be calculated all at once
     data <- array(data, dim=c(1, 1, ndays*metadata$ts_per_day, length(members)))
   } else {
+
+    ndays <- length(ensemble_issue_times)/(24/metadata$update_rate)
 
     tictoc::tic("Ensemble load-in time along the diagonal")
     # Get the minimum rectangle of data from the NetCDF that contains the desired data,
