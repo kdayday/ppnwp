@@ -4,6 +4,7 @@
 #' time-of-day training method, then forecasts using the current
 #' NWP ensemble.
 #' @family ts_training_forecast
+#' @param first_valid_time A time stamp
 #' @param t_idx_series Series of time indices to forecast, relative to the
 #'   telemetry time indices
 #' @param ens_test [time x member] matrix of ensemble data for test period
@@ -18,14 +19,14 @@
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
-get_emos_ts <- function(t_idx_series, ens_test, ensemble, telemetry, sun_up,
+get_emos_ts <- function(first_valid_time, t_idx_series, ens_test, ensemble, telemetry, sun_up,
                         site, AC_rating, metadata){
 
   # Train
   models <- train_emos(t_idx_series, ensemble, telemetry, sun_up, site,
                         AC_rating, metadata)
   # Forecast
-  ts <- forecasting::ts_forecast(ens_test, metadata$date_benchmark_start,
+  ts <- forecasting::ts_forecast(ens_test, first_valid_time,
                                  time_step=metadata$resolution, scale='site',
                                  location=site, method = 'emos',
                                  MoreTSArgs = list(model=models), max_power=AC_rating)

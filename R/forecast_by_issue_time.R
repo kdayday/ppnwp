@@ -27,29 +27,29 @@ forecast_by_issue_time <- function(issue, ensemble, telemetry,
                          issue=issue, metadata=metadata, telemetry=telemetry)
 
   ens_test <- ensemble$data[which(issue==ensemble$issuetime), , ]
-
+  first_valid <- issue + hours(ifelse(metadata$is_rolling, 0, metadata$lead_time))
 
   ts <- switch(metadata$forecast_type,
-               "sliding"=get_bma_ts(t_idx_series, ens_test, ensemble, telemetry,
+               "sliding"=get_bma_ts(first_valid, t_idx_series, ens_test, ensemble, telemetry,
                                     sun_up, site, AC_rating, metadata,
                                     lm_formula),
-               "sliding_emos"=get_emos_ts(t_idx_series, ens_test, ensemble, telemetry,
+               "sliding_emos"=get_emos_ts(first_valid, t_idx_series, ens_test, ensemble, telemetry,
                                           sun_up, site, AC_rating, metadata),
-               "constant_bma"=get_bma_ts(t_idx_series, ens_test, ensemble, telemetry,
+               "constant_bma"=get_bma_ts(first_valid, t_idx_series, ens_test, ensemble, telemetry,
                                           sun_up, site, AC_rating, metadata,
                                           lm_formula),
-               "raw" = get_raw_ts(ens_test, site, AC_rating, metadata),
-               "binned" =get_binned_ts(ens_test, site, AC_rating, metadata),
-               "time-of-day"=get_bma_ts(t_idx_series, ens_test, ensemble, telemetry,
+               "raw" = get_raw_ts(first_valid, ens_test, site, AC_rating, metadata),
+               "binned" =get_binned_ts(first_valid, ens_test, site, AC_rating, metadata),
+               "time-of-day"=get_bma_ts(first_valid, t_idx_series, ens_test, ensemble, telemetry,
                                         sun_up, site, AC_rating, metadata,
                                         lm_formula),
-               "time-of-day_emos"=get_emos_ts(t_idx_series, ens_test, ensemble,
+               "time-of-day_emos"=get_emos_ts(first_valid, t_idx_series, ens_test, ensemble,
                                               telemetry, sun_up, site,
-                                              AC_rating, metadata),
-               "climate" =get_clim_ts(telemetry, sun_up, site, AC_rating, metadata),
-               "peen" = get_peen_ts(t_idx_series, telemetry, sun_up, site,
                                                AC_rating, metadata),
-               "ch-peen"=get_chpeen_ts(t_idx_series, telemetry, sun_up, site,
+               "climate" =get_clim_ts(first_valid, telemetry, sun_up, site, AC_rating, metadata),
+               "peen" = get_peen_ts(first_valid, t_idx_series, telemetry, sun_up, site,
+                                               AC_rating, metadata),
+               "ch-peen"=get_chpeen_ts(first_valid, t_idx_series, telemetry, sun_up, site,
                                                    AC_rating, metadata),
                stop("unknown forecast type"))
 

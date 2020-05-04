@@ -5,6 +5,7 @@
 #' that does not evolve as more observations are realized in the evaluation
 #' period.
 #' @family ts_training_forecast
+#' @param first_valid_time A time stamp
 #' @param t_idx_series Series of time indices to forecast, relative to the
 #'   telemetry time indices
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
@@ -15,7 +16,7 @@
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
-get_chpeen_ts <- function(t_idx_series, telemetry, sun_up, site,
+get_chpeen_ts <- function(first_valid_time, t_idx_series, telemetry, sun_up, site,
                           AC_rating, metadata){
 
   warning("CH-PeEn is currently ignores issue time and assumes most recent measurements are available.")
@@ -24,7 +25,7 @@ get_chpeen_ts <- function(t_idx_series, telemetry, sun_up, site,
   data.input <- train_ch_peen(t_idx_series, telemetry, sun_up, metadata)
 
   # Forecast
-  ts <- forecasting::ts_forecast(data.input, metadata$date_benchmark_start,
+  ts <- forecasting::ts_forecast(data.input, first_valid_time,
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'empirical',
