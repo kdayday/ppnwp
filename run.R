@@ -13,15 +13,19 @@ library(lubridate)
 # ------------------------------------------------------
 
 # Determine the default constants.  Types are inferred by the defaults in the list
-# forecast_type -> one of : "sliding" "time-of-day" "raw" "binned" "climate" "peen" "ch-peen" "constant_bma" "sliding_emos" "time-of-day_emos"
-# bma_distribution -> one of "beta" or "truncnorm" Defines what distribution type should be used for a "sliding" or "time-of-day" BMA forecast.
-# lead_time -> Forecast lead time in hours (L)
+# forecast_type -> one of : "sliding" "time-of-day" "raw" "binned" "climate" "peen" "ch-peen"
+#                           "constant_bma" "sliding_emos" "time-of-day_emos"
+# bma_distribution -> one of "beta" or "truncnorm" Defines what distribution type should be used
+#                     for a "sliding" or "time-of-day" BMA forecast.
 # lead_time -> Forecast lead time in hours (L). If rolling forecast, this time is the same between
 #              issue and valid time for each forecast. If not a rolling forecast, this is the time
 #             between issue and the first forecast in the run.
 # resolution -> Forecast temporal resolution in hours (R)
 # horizon -> Forecast temporal horizon in hours (H)
 # update_rate -> Time in hours between issuance of subsequent forecasts (U)
+# is_rolling -> Boolean. If true, this makes a single ts_forecast for ease of calculating metrics.
+#               Must have horizon equal to update rate. Horizon must be consistent
+#               with start and end dates.
 # members -> List of ensemble member indices to include.
 # site -> Power plant site index.
 # percent_clipping_threshold -> % of power plant rating to use as clipping threshold, (0,1)
@@ -30,11 +34,13 @@ library(lubridate)
 # date_last_valid -> Last valid time to include in the benchmark (ymd_h). The first valid time and last
 #                     issue time are backcalculated from date_first_issue, date_last_valid, and the temporal parameters.
 # training_window -> If a sliding window is used, the training window is a sliding windows in *hours*.
-#                 -> If a time-of-day window is used, the appropriate hour will be cherry picked from this number of *days* this year,
+#                 -> If a time-of-day window is used, the appropriate hour will be cherry picked from
+#                     this number of *days* this year,
 #                     plus a window twice this length the year before
 #                 -> If a persistence ensemble is used, this is the number previous non-NA measurements
 #                     at the same time-of-day. Ignored for a complete-history PeEn, which uses a static 1 year of data.
-#                 -> If a constant BMA forecast is used, the training data is the previous year, resulting in a constant BMA *model*, though the resulting forecast is not constant.
+#                 -> If a constant BMA forecast is used, the training data is the previous year,
+#                    resulting in a constant BMA *model*, though the resulting forecast is not constant.
 # lm_intercept -> Boolean. Whether to include a non-zero intercept in BMA linear regression or not (default)
 # telemetry_file -> Name of telemetry NetCDF file in the /data folder
 # ensemble_file -> Name of enemble forecast NetCDF file in the /data folder
