@@ -179,7 +179,6 @@ check_maxar_parameters <- function(nc, metadata, site) {
   if (metadata$update_rate < 1 || metadata$update_rate%%1!=0) {stop("Update rate must be hourly, by at least 1 hour")}
   if (metadata$resolution !=1) stop("Maxar lookup function assumes resolution of 1 hour.")
   if (metadata$is_rolling) {
-    if (metadata$lead_time > 0) stop("Use lead time of 0 for correct rolling forecast logic.")
     if (metadata$horizon != metadata$update_rate) stop("Use equal horizon and update rate for rolling forecast.")
     ndays <- get_ndays(metadata$date_benchmark_start, metadata$date_benchmark_end)
     if (metadata$horizon != ndays*metadata$ts_per_day) stop("Horizon must be consistent with start/end dates for rolling forecast.")
@@ -277,15 +276,16 @@ get_start_day <- function(date_data_start, date_start){
 #'   recent forecast
 #' @return c(issue, step) indices of the ensemble$data vector
 valid_2_issue_index <- function(valid, metadata, ensemble, issue=NULL) {
+  lead_time <- ifelse(metadata$is_rolling, 0, metadata$lead_time)
   # Find timestamp of most recent issue
   if (is.null(issue)) {
     issue_index <- max(which(ensemble$issuetime <=
-                               (valid-lubridate::hours(metadata$lead_time))))
+                               (valid-lubridate::hours(lead_time))))
     issue <- ensemble$issuetime[issue_index]
   } else {
     issue_index <- which(issue == ensemble$issuetime)
   }
-  step_index <- (valid - issue - lubridate::dhours(metadata$lead_time))/
+  step_index <- (valid - issue - lubridate::dhours(lead_time))/
     lubridate::dhours(metadata$resolution) + 1
   return(c(issue_index, step_index))
 }
@@ -299,7 +299,8 @@ valid_2_issue_index <- function(valid, metadata, ensemble, issue=NULL) {
 #' @return an index of the telemetry$data vector
 issue_2_valid_index <- function(issue, step, metadata, telemetry) {
   if (step < 1) stop("Step must be at least 1")
-  which(issue + lubridate::hours(metadata$lead_time + (step-1)*metadata$resolution)==
+  lead_time <- ifelse(metadata$is_rolling, 0, metadata$lead_time)
+  which(issue + lubridate::hours(lead_time + (step-1)*metadata$resolution)==
           telemetry$validtime)
 }
 

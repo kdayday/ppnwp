@@ -53,11 +53,6 @@ test_that('check_maxar_parameters throws errors', {
   expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=1,
                                                             resolution=0.5),
                                       site=NaN), "Maxar lookup*")
-  expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=1,
-                                                            resolution=1,
-                                                            lead_time=1,
-                                                            is_rolling=T),
-                                      site=NaN), "Use lead*")
   expect_error(check_maxar_parameters(nc=NaN, metadata=list(update_rate=10,
                                                             resolution=1,
                                                             lead_time=0,
@@ -93,29 +88,29 @@ test_that('check_maxar_parameters throws errors', {
 
 test_that('issue_2_valid_index throws error', {
   issue <- lubridate::ymd("20010101")
-  metadata <- list(resolution=1, lead_time=2)
+  metadata <- list(resolution=1, lead_time=2, is_rolling=F)
   telemetry <- list(validtime=seq(from=as.POSIXlt(issue), by="hours", length.out=20))
   expect_error(issue_2_valid_index(issue=issue, step=0, metadata=metadata, telemetry=telemetry), "Step*")
 })
 
-test_that('issue_2_valid_index is correct', {
+test_that('issue_2_valid_index is correct for non-rolling forecast', {
   issue <- lubridate::ymd("20010101")
-  metadata <- list(resolution=2, lead_time=2)
+  metadata <- list(resolution=2, lead_time=2, is_rolling=F)
   telemetry <- list(validtime=seq(from=as.POSIXlt(issue), by="hours", length.out=20))
   expect_equal(issue_2_valid_index(issue=issue, step=1, metadata=metadata, telemetry=telemetry), 3)
   expect_equal(issue_2_valid_index(issue=issue, step=2, metadata=metadata, telemetry=telemetry), 5)
 })
 
-test_that('issue_2_valid_index with 0 lead time (rolling) is correct', {
+test_that('issue_2_valid_index is correct for rolling forecast', {
   issue <- lubridate::ymd("20010101")
-  metadata <- list(resolution=2, lead_time=0)
+  metadata <- list(resolution=2, lead_time=4, is_rolling=T)
   telemetry <- list(validtime=seq(from=as.POSIXlt(issue), by="hours", length.out=20))
   expect_equal(issue_2_valid_index(issue=issue, step=1, metadata=metadata, telemetry=telemetry), 1)
 })
 
 test_that('valid_2_issue_index with default issue time is correct', {
   valid <- lubridate::ymd_h("20010101_18")
-  metadata <- list(resolution=1, lead_time=1, update_rate=6, horizon=18)
+  metadata <- list(resolution=1, lead_time=1, update_rate=6, horizon=18, is_rolling=F)
   ensemble <- list(issuetime=seq(from=as.POSIXlt(lubridate::ymd("20010101")), by="6 hours", length.out=4))
   expect_equal(valid_2_issue_index(valid, metadata, ensemble), c(3, 6))
 })
@@ -123,7 +118,7 @@ test_that('valid_2_issue_index with default issue time is correct', {
 test_that('valid_2_issue_index with given issue time is correct', {
   issue <- as.POSIXlt(lubridate::ymd("20010101"))
   valid <- lubridate::ymd_h("20010101_18")
-  metadata <- list(resolution=1, lead_time=1, update_rate=6, horizon=18)
+  metadata <- list(resolution=1, lead_time=1, update_rate=6, horizon=18, is_rolling=F)
   ensemble <- list(issuetime=seq(from=as.POSIXlt(issue), by="6 hours", length.out=4))
   expect_equal(valid_2_issue_index(valid, metadata, ensemble, issue=issue), c(1, 18))
 })

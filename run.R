@@ -16,6 +16,9 @@ library(lubridate)
 # forecast_type -> one of : "sliding" "time-of-day" "raw" "binned" "climate" "peen" "ch-peen" "constant_bma" "sliding_emos" "time-of-day_emos"
 # bma_distribution -> one of "beta" or "truncnorm" Defines what distribution type should be used for a "sliding" or "time-of-day" BMA forecast.
 # lead_time -> Forecast lead time in hours (L)
+# lead_time -> Forecast lead time in hours (L). If rolling forecast, this time is the same between
+#              issue and valid time for each forecast. If not a rolling forecast, this is the time
+#             between issue and the first forecast in the run.
 # resolution -> Forecast temporal resolution in hours (R)
 # horizon -> Forecast temporal horizon in hours (H)
 # update_rate -> Time in hours between issuance of subsequent forecasts (U)
