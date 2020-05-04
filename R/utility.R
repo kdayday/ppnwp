@@ -271,11 +271,14 @@ get_start_day <- function(date_data_start, date_start){
 #' Translate telemetry valid time to ensemble issue/step indices
 #'
 #' @param valid A POSIXct timestamp of valid time
-#' @param metadata
-#' @param ensemble
+#' @param metadata A data.frame of forecast parameters
+#' @param ensemble A list of data=[issue x step x member] array of all
+#'   ensemble data (historical + test) and issuetime=vector of POSIXct time
+#'   stamps
 #' @param issue (optional) A POSIXct timestamp of issue time, defaults to most
 #'   recent forecast
 #' @return c(issue, step) indices of the ensemble$data vector
+#' @export
 valid_2_issue_index <- function(valid, metadata, ensemble, issue=NULL) {
   lead_time <- ifelse(metadata$is_rolling, 0, metadata$lead_time)
   # Find timestamp of most recent issue
@@ -295,9 +298,11 @@ valid_2_issue_index <- function(valid, metadata, ensemble, issue=NULL) {
 #'
 #' @param issue A POSIXct timestamp of issue time
 #' @param step Index of forecast step in this run
-#' @param metadata
-#' @param telemetry
+#' @param metadata A data.frame of forecast parameters
+#' @param telemetry A list of data=vector of telemetry and validtime=vector of
+#'   POSIXct times
 #' @return an index of the telemetry$data vector
+#' @export
 issue_2_valid_index <- function(issue, step, metadata, telemetry) {
   if (step < 1) stop("Step must be at least 1")
   lead_time <- ifelse(metadata$is_rolling, 0, metadata$lead_time)
@@ -305,7 +310,16 @@ issue_2_valid_index <- function(issue, step, metadata, telemetry) {
           telemetry$validtime)
 }
 
+#' Subset ensemble data to get BMA/EMOS training data
+#'
 #' This function will need to be expanded for full functionality of non-rolling forecasts
+#'
+#' @param time_idx_train Vector of time-point indices, relative to telemetry's valid times
+#' @param ensemble A list of data=[issue x step x member] array of all
+#'   ensemble data (historical + test) and issuetime=vector of POSIXct time
+#'   stamps
+#' @param metadata A data.frame of forecast parameters
+#' @export
 get_training_ensemble_from_validtimes <- function(time_idx_train, ensemble, metadata) {
   if (metadata$is_rolling) {
     # ensemble sizing is [1 x all steps x member]
