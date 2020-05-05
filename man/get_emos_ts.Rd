@@ -4,10 +4,12 @@
 \alias{get_emos_ts}
 \title{Get time-series forecast using EMOS post-processing of NWP ensembles}
 \usage{
-get_emos_ts(t_idx_series, ens_test, ensemble, telemetry, sun_up, site,
-  AC_rating, metadata)
+get_emos_ts(first_valid_time, t_idx_series, ens_test, ensemble, telemetry,
+  sun_up, site, AC_rating, metadata)
 }
 \arguments{
+\item{first_valid_time}{A time stamp}
+
 \item{t_idx_series}{Series of time indices to forecast, relative to the
 telemetry time indices}
 

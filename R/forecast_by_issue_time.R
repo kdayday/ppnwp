@@ -58,8 +58,10 @@ forecast_by_issue_time <- function(issue, ensemble, telemetry,
   t_f <- tictoc::toc() # Forecast time
   runtime <- t_f$toc - t_f$tic
 
+  # TODO IN THE FUTURE, MAY WANT TO CHANGE THIS TO telemetry AND CHANGE TIMESTAMPING IN EVALUATION
   # Test telemetry and ensemble test logic are the same for all methods
   tel_test <- telemetry$data[t_idx_series]
+
   # Save the run time data in R
   data_fname <- paste("data site ", site, ".RData", sep="")
 
