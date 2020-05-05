@@ -182,25 +182,20 @@ sun_up <- apply(ensemble$data, MARGIN = c(1, 2), FUN = check_sunup)
 # Translate sun_up to valid time and get issue times of the validation set
 if (metadata$is_rolling) {
   sun_up <- sun_up[1,]
-  issue_times <- metadata$date_training_start
+  issue_times <- metadata$date_first_valid
 } else {
   sun_up <- sapply(telemetry$validtime, FUN=function(valid) {
     sun_up[valid_2_issue_index(valid, metadata, ensemble)]})
   issue_times <- ensemble$issuetime[which(ensemble$issuetime==metadata$date_first_issue):length(ensemble$issuetime)]
 }
 
-# Conduct forecast for each issue time
-for (issue in issue_times){
-
-  forecast_by_issue_time(issue, ensemble, telemetry,
-                         sun_up, site, s, AC_rating, metadata,
+# Conduct forecast for each issue time (must sequence along or will return integer)
+for (i in seq_along(issue_times)){
+  forecast_by_issue_time(issue_times[i], ensemble, telemetry,
+                         sun_up, site, AC_rating, metadata,
                          lm_formula, runtime_data_dir)
-
 }
 
 export_metrics_to_csv(out_dir, runtime_data_dir, metadata)
-
-
-
 
 tictoc::toc()
