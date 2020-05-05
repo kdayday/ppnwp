@@ -68,9 +68,6 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir,
 add_metrics_to_dataframe <- function(df, ts, tel_test, df_idx, AC_rating,
                                      forecast_type, runtime) {
 
-  # Name this row by site
-  rownames(df)[df_idx] <- ts$location
-
   df[df_idx, "Runtime [sec]"] <- runtime
 
   # Calculate results
@@ -91,5 +88,7 @@ add_metrics_to_dataframe <- function(df, ts, tel_test, df_idx, AC_rating,
     for (key in names(ts$forecasts[!is.na(ts$forecasts)][[1]]$geometry_codes))
       df[df_idx, key] <- sum(sapply(ts$forecasts[!is.na(ts$forecasts)], FUN=function(fc) return(fc$geometry_codes[[key]])))
   }
+  # Name this row by site
+  rownames(df)[df_idx] <- ts$location
   return(df)
 }
