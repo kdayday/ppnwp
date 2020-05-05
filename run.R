@@ -46,17 +46,17 @@ library(lubridate)
 # ensemble_file -> Name of enemble forecast NetCDF file in the /data folder
 # group_directory -> Desired output folder name, used to group results runs together. Defaults to unique UUID.
 
-defaults <- list(forecast_type="sliding",
+defaults <- list(forecast_type="raw",
                  bma_distribution= "beta",
-                 lead_time=1,
+                 lead_time=4,
                  resolution=1,
-                 horizon=12,
-                 update_rate=6,
-                 is_rolling=F,
+                 horizon=72,
+                 update_rate=72,
+                 is_rolling=T,
                  members = "1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41",
                  site = 1,
                  percent_clipping_threshold = 0.995,
-                 date_first_issue = "20171231_21",
+                 date_first_issue = "20180101_00",
                  date_last_valid = "20180103_23", #"20181231",
                  training_window = 72,
                  lm_intercept = FALSE,
