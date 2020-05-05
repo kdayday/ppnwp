@@ -26,7 +26,9 @@ forecast_by_issue_time <- function(issue, ensemble, telemetry,
   t_idx_series <- sapply(1:metadata$horizon, FUN=issue_2_valid_index,
                          issue=issue, metadata=metadata, telemetry=telemetry)
 
-  ens_test <- ensemble$data[which(issue==ensemble$issuetime), , ]
+  ens_test <- if (metadata$is_rolling) {
+    ensemble$data[1, t_idx_series, ]
+    } else {ensemble$data[which(issue==ensemble$issuetime), , ]}
   first_valid <- issue + hours(ifelse(metadata$is_rolling, 0, metadata$lead_time))
 
   ts <- switch(metadata$forecast_type,
