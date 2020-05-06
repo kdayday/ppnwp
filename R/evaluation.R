@@ -84,7 +84,7 @@ add_metrics_to_dataframe <- function(df, ts, tel_test, df_idx, AC_rating,
   df[df_idx, "90% interval width"] <- forecasting::sharpness_avg(ts, tel_test, alpha=.10, normalize.by=AC_rating, agg=TRUE)$mean
   df[df_idx, "MAE"] <- forecasting::MAE(ts, tel_test, normalize.by=AC_rating, agg=TRUE)
   # Extract geometry code summary statistics
-  if (forecast_type %in% c("sliding", "time-of-day", "analog")) {
+  if (forecast_type %in% c("bma_sliding", "bma_time-of-day")) {
     for (key in names(ts$forecasts[!is.na(ts$forecasts)][[1]]$geometry_codes))
       df[df_idx, key] <- sum(sapply(ts$forecasts[!is.na(ts$forecasts)], FUN=function(fc) return(fc$geometry_codes[[key]])))
   }

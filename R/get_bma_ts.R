@@ -23,10 +23,10 @@
 get_bma_ts <- function(first_valid_time, t_idx_series, ens_test, ensemble, telemetry, sun_up,
                        site, AC_rating, metadata, lm_formula){
   # Train
-  if (metadata$forecast_type %in% c("sliding", "time-of-day")) {
+  if (metadata$forecast_type %in% c("bma_sliding", "bma_time-of-day")) {
     models <- train_bma(t_idx_series, ensemble, telemetry, sun_up, site,
                         AC_rating, metadata, lm_formula)
-  } else if (metadata$forecast_type=="constant_bma") {
+  } else if (metadata$forecast_type=="bma_constant") {
     models <- train_constant_bma(t_idx_series, ensemble, telemetry, sun_up,
                                  site, AC_rating, metadata, lm_formula)
   } else stop("Unrecognized BMA training method.")
@@ -89,9 +89,9 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
     if (!sun_up[time_idx_forecast]) {
       model <- NA
     } else {
-      if (metadata$forecast_type == "sliding") {
+      if (metadata$forecast_type == "bma_sliding") {
         time_idx_train <- sort(time_idx_forecast - seq_len(metadata$training_window))
-      } else {  # metadata$forecast_type == "time-of-day"
+      } else {  # metadata$forecast_type == "bma_time-of-day"
         time_idx_train <- sort(time_idx_forecast + c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
                                                                                     length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
                                                      seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))

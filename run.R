@@ -13,10 +13,10 @@ library(lubridate)
 # ------------------------------------------------------
 
 # Determine the default constants.  Types are inferred by the defaults in the list
-# forecast_type -> one of : "sliding" "time-of-day" "raw" "binned" "climate" "peen" "ch-peen"
-#                           "constant_bma" "sliding_emos" "time-of-day_emos"
+# forecast_type -> one of : "bma_sliding" "bma_time-of-day" "raw" "binned" "climate" "peen" "ch-peen"
+#                           "bma_constant" "emos_sliding" "emos_time-of-day"
 # bma_distribution -> one of "beta" or "truncnorm" Defines what distribution type should be used
-#                     for a "sliding" or "time-of-day" BMA forecast.
+#                     for a "bma_sliding" or "bma_time-of-day" BMA forecast.
 # lead_time -> Forecast lead time in hours (L). If rolling forecast, this time is the same between
 #              issue and valid time for each forecast. If not a rolling forecast, this is the time
 #             between issue and the first forecast in the run.
@@ -57,7 +57,7 @@ defaults <- list(forecast_type="raw",
                  site = 1,
                  percent_clipping_threshold = 0.995,
                  date_first_issue = "20180101_00",
-                 date_last_valid = "20180103_23", #"20181231",
+                 date_last_valid = "20181231_23",
                  training_window = 72,
                  lm_intercept = FALSE,
                  telemetry_file="telemetry.nc",
@@ -108,11 +108,11 @@ date_training_start <- switch(metadata$forecast_type,
                               "climate" = metadata$date_first_issue, # No training period
                               "peen" = metadata$date_first_issue - 2*days(metadata$training_window), # Add an expanded window to ensure enough non-NA points are available
                               "ch-peen" = metadata$date_first_issue-years(1),
-                              "constant_bma" = metadata$date_first_issue-years(1),
-                              "sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
-                              "sliding_emos" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
-                              "time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
-                              "time-of-day_emos" = metadata$date_first_issue - years(1) - days(metadata$training_window),
+                              "bma_constant" = metadata$date_first_issue-years(1),
+                              "bma_sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
+                              "emos_sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
+                              "bma_time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
+                              "emos_time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
                               stop("unknown forecast type"))
 
 metadata$ts_per_day <- 24/metadata$resolution
@@ -122,13 +122,13 @@ metadata$ts_per_day <- 24/metadata$resolution
 # ------------------------------------------------------
 
 forecast_name <- switch(metadata$forecast_type,
-                        "sliding" = paste("Discrete-", metadata$bma_distribution, " BMA forecast with sliding window", sep=""),
-                        "sliding_emos" = "Truncated normal EMOS forecast with sliding window",
-                        "constant_bma" = paste("Discrete-", metadata$bma_distribution, " constant BMA forecast", sep=""),
+                        "bma_sliding" = paste("Discrete-", metadata$bma_distribution, " BMA forecast with sliding window", sep=""),
+                        "emos_sliding" = "Truncated normal EMOS forecast with sliding window",
+                        "bma_constant" = paste("Discrete-", metadata$bma_distribution, " constant BMA forecast", sep=""),
                         "raw" = "Raw ensemble",
                         "binned" = "Binned probability forecast",
-                        "time-of-day" = paste("Discrete-", metadata$bma_distribution, " BMA forecast with time-of-day window", sep=""),
-                        "time-of-day_emos" = "Truncated normal EMOS forecast with time-of-day window",
+                        "bma_time-of-day" = paste("Discrete-", metadata$bma_distribution, " BMA forecast with time-of-day window", sep=""),
+                        "emos_time-of-day" = "Truncated normal EMOS forecast with time-of-day window",
                         "climate" = "Climatology forecast",
                         "peen" = "Persistence ensemble",
                         "ch-peen" = "Complete-history persistence ensemble",
