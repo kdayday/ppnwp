@@ -35,22 +35,22 @@ distribution of the raw ensemble, and a rolling forecast over 3
 days using BMA with a sliding training window)
 
 Some notes about the configuration:
--- The script is currently only complete for rolling forecasts, so
+* The script is currently only complete for rolling forecasts, so
 only run with is_rolling=TRUE
--- The rolling forecast is an alternate format to the issue-time 
+* The rolling forecast is an alternate format to the issue-time 
 based format that we are moving towards, so it has some specific
 idiosyncrasies:
-  -- Lead-time will be the same for each valid time you are 
+* Lead-time will be the same for each valid time you are 
   interested in. A lead-time of 4 will produce a rolling 4-hour-ahead
   forecast.
-  -- To forecast over a specific horizon, give date_first_issue
+  * To forecast over a specific horizon, give date_first_issue
      the first valid time you are interested in and date_last_valid
      the last valid time you are interested in.
-  -- In this case, horizon will be the total number of forecasts you
+  * In this case, horizon will be the total number of forecasts you
      make, and it must match the range given by date_first_issue to
      date_last_valid. So if date_first_issue=20180101_00 and 
      date_last_valid=20180101_23, then horizon=24
-  -- Give update-rate the same value as you give horizon (we do not 
+  * Give update-rate the same value as you give horizon (we do not 
      want to use update-rate in this alternate format). 
 
 The batch scripts show examples of how to deal with these temporal
