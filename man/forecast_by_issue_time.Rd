@@ -17,7 +17,7 @@ stamps}
 \item{telemetry}{A list of data=vector of telemetry and validtime=vector of
 POSIXct times}
 
-\item{sun_up}{A [day x issue x step] matrix of booleans}
+\item{sun_up}{An [issue x step] matrix of booleans}
 
 \item{site}{String, site name}
 

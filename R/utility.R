@@ -1,15 +1,15 @@
 #' Load ensemble forecast data
 #'
-#' Loads in ensemble forecast data into the form: [day x issue x step x member]
+#' Loads in ensemble forecast data into the form: [issue x step x member]
 #' Also generates a list of validtime timestamps
 #'
 #' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 #' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
 #' the form above or in a "rolling" format over the course of the year in the
-#' form [1 x 1 x all steps x member] to make annual average metrics easier
+#' form [1 x all steps x member] to make annual average metrics easier
 #'
-#' If input file in in ECMWF format, assumes a NETCDF file of the dimensions:
-#' [day x issue x step x member]
+#' If input file in in ECMWF format (via reV), assumes an h5 file of the
+#' dimensions: [issue x step x member]
 #'
 #' @param fname file name
 #' @param members A vector of member indices
@@ -18,7 +18,7 @@
 #'   time-steps per day, rolling or not, etc.
 #' @param date_start Timestamp
 #' @param ... Additional parameters to load-in subfunctions
-#' @return A list of data=[day x issue x step x member] matrix and issuetime=a
+#' @return A list of data=[issue x step x member] matrix and issuetime=a
 #'   vector of POSIXct timestamps
 #' @export
 get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
@@ -50,11 +50,11 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 
 #' Subfunction to load in ECMWF data
 #'
-#' Loads in ensemble forecast data into the form: [day x issue x step x member]
+#' Loads in ensemble forecast data into the form: [issue x step x member]
 #' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 #' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
 #' the form above or in a "rolling" format over the course of the year in the
-#' form [1 x 1 x all steps x member] to make annual average metrics easier
+#' form [1 x all steps x member] to make annual average metrics easier
 #' @param nc An open NetCDF object
 #' @param members A vector of member indices
 #' @param site Site index
@@ -96,8 +96,8 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
       data[which(data > AC_rating)] <- AC_rating
     }
 
-    # Reformat to [day x issue x step x member] format, but use
-    # only a single day/issue time so that metrics for entire
+    # Reformat to [issue x step x member] format, but use
+    # only a single issue time so that metrics for entire
     # year can be calculated all at once
     data <- array(data, dim=c(1, ndays*metadata$ts_per_day, length(members)))
   } else {
@@ -117,7 +117,7 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
                    ensemble_issue_times=ensemble_issue_times, metadata=metadata, simplify="array")
     tictoc::toc()
 
-    # [step x issue (rolling) x member] to [issue (rolling) x step x member]
+    # [step x issue x member] to [issue x step x member]
     data <- aperm(data, perm=c(2,1,3))
   }
   return(data)

@@ -21,19 +21,19 @@ time-steps per day, rolling or not, etc.}
 \item{...}{Additional parameters to load-in subfunctions}
 }
 \value{
-A list of data=[day x issue x step x member] matrix and issuetime=a
+A list of data=[issue x step x member] matrix and issuetime=a
   vector of POSIXct timestamps
 }
 \description{
-Loads in ensemble forecast data into the form: [day x issue x step x member]
+Loads in ensemble forecast data into the form: [issue x step x member]
 Also generates a list of validtime timestamps
 }
 \details{
 If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 x Hour x Site x Lead time x member] Maxar data can be loaded to either match
 the form above or in a "rolling" format over the course of the year in the
-form [1 x 1 x all steps x member] to make annual average metrics easier
+form [1 x all steps x member] to make annual average metrics easier
 
-If input file in in ECMWF format, assumes a NETCDF file of the dimensions:
-[day x issue x step x member]
+If input file in in ECMWF format (via reV), assumes an h5 file of the
+dimensions: [issue x step x member]
 }
