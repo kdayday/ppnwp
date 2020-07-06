@@ -189,13 +189,22 @@ if (metadata$is_rolling) {
   issue_times <- ensemble$issuetime[which(ensemble$issuetime==metadata$date_first_issue):length(ensemble$issuetime)]
 }
 
+forecast_runs <- vector(mode = "list", length = length(issue_times))
+
+tictoc::tic(paste("Total computation time for site ", site, sep=''))
 # Conduct forecast for each issue time (must sequence along or will return integer)
 for (i in seq_along(issue_times)){
-  forecast_by_issue_time(issue_times[i], ensemble, telemetry,
-                         sun_up, site, AC_rating, metadata,
-                         lm_formula, runtime_data_dir)
+  forecast_runs[[i]] <- forecast_by_issue_time(issue_times[i], ensemble, telemetry,
+                         sun_up, site, AC_rating, metadata, lm_formula)
 }
+t_f <- tictoc::toc() # Forecast time
+runtime <- t_f$toc - t_f$tic
 
+
+# Save the run time data in R
+data_fname <- paste("data site ", site, ".RData", sep="")
+save(forecast_runs, issue_times, telemetry, ensemble, runtime, AC_rating, metadata,
+     file=file.path(runtime_data_dir, data_fname))
 export_metrics_to_csv(out_dir, runtime_data_dir, metadata)
 
 tictoc::toc()
