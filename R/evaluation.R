@@ -2,53 +2,40 @@
 #'
 #' Cycles through forecasts in the runtime_data_dir (presumably organized by
 #' site) to assess metrics, including CRPS (weighted and unweighted) and data
-#' quality metrics. If "export_plots" is selected, this will generate
-#' reliability, sharpness, quantile score, and PIT histogram plots *for each
-#' site*.
-#' @param out_dir Main output directory to save graphs
+#' quality metrics.
+#'
+#' @param out_dir Main output directory to save .csv
 #' @param runtime_data_dir Directory where .Rdata results are saved
-#' @param metadata A data.frame of forecast parameters
-#' @param export_plots Boolean flag (default=False)
 #' @export
-export_metrics_to_csv <- function(out_dir, runtime_data_dir,
-                                   metadata, export_plots=F){
+export_metrics_to_csv <- function(out_dir, runtime_data_dir){
 
   df <- data.frame()
-  if (export_plots) {
-    qs_dir <- file.path(out_dir, "Quantile score plots")
-    dir.create(qs_dir, showWarnings = FALSE)
-
-    rel_dir <- file.path(out_dir, "Reliability plots")
-    dir.create(rel_dir, showWarnings = FALSE)
-
-    iw_dir <- file.path(out_dir, "Interval width plots")
-    dir.create(iw_dir, showWarnings = FALSE)
-
-    pit_dir <- file.path(out_dir, "PIT histograms")
-    dir.create(pit_dir, showWarnings = FALSE)
-  }
 
   files <- list.files(runtime_data_dir)
 
   for(f in seq_along(files)){
 
-    # Load in ts, tel_test, ens_test, AC_rating
+    # Load in forecast_runs, telemetry, ensemble, AC_rating
     load(file.path(runtime_data_dir , files[f]))
 
-    df <- add_metrics_to_dataframe(df, ts, tel_test, f, AC_rating,
-                                  metadata$forecast_type, runtime)
+    # Include in for loop so that additions aren't appended every round
+    cnames <- c("missing_sunup_rate", "number_validatable_forecasts",
+                "CRPS", "CRPS tails", "CRPS left", "CRPS right",
+                "CRPS center", "90% interval width", "MAE")
+    # Each of these metrics should either be summed or averaged
+    aggregate_function <- c(sum, sum, mean, mean, mean, mean, mean, mean, mean)
 
-    if (export_plots) {
-      plot_reliability(ts, tel_test,
-                       fname=file.path(rel_dir, paste("Site", ts$location, "reliability.pdf", sep="_")))
-      plot_quantile_score(ts, tel_test,
-                          fname=file.path(qs_dir, paste("Site", ts$location, "qs.pdf", sep="_")))
-      plot_PIT_histogram(ts, tel_test, nbins=20,
-                         fname=file.path(pit_dir, paste("Site", ts$location, "PIT.pdf", sep="_")))
-      plot_interval_width(ts, tel_test, normalize.by=AC_rating,
-                          fname=file.path(iw_dir, paste("Site", ts$location, "interval_width.pdf", sep="_")))
+    if (metadata$forecast_type %in% c("bma_sliding", "bma_time-of-day")) {
+      cnames <- c(cnames, names(forecast_runs[[1]]$forecasts[!is.na(forecast_runs[[1]]$forecasts)][[1]]$geometry_codes))
+      aggregate_function <- c(aggregate_function, sum, sum, sum, sum, sum)
     }
+
+    df <- add_metrics_to_dataframe(df, forecast_runs, issue_times,
+                                   telemetry, f, AC_rating,
+                                  runtime, metadata, aggregate_function)
   }
+
+  colnames(df)[1+seq_along(cnames)] <- cnames
 
   write.csv(df, file=file.path(out_dir, "metrics.csv"))
 }
@@ -57,40 +44,78 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir,
 #'
 #' CRPS, interval width, and MAE are normalized by the site's AC power rating.
 #' @param df A data frame to fill with metrics for all the sites
-#' @param ts A ts_forecast object
-#' @param tel_test Vector of telemetry for the test period, corresponding to the length of ts
+#' @param forecast_runs A list of ts_forecast objects
+#' @param issue_times A list of timestamps, same length as forecast_runs
+#' @param telemetry Vector of telemetry
 #' @param df_idx Index of data frame row (likely index of site)
 #' @param AC_rating Site's AC rating
-#' @param forecast_type Name of forecast method, e.g., "raw"
 #' @param runtime A value in seconds
+#' @param metadata A data.frame of forecast parameters
+#' @param aggregate_function A list of functions (mean or sum) for how to
+#'   aggregate the metrics over the forecast runs
 #' @return data.frame df with a row added for this site
 #' @export
-add_metrics_to_dataframe <- function(df, ts, tel_test, df_idx, AC_rating,
-                                     forecast_type, runtime) {
+add_metrics_to_dataframe <- function(df, forecast_runs, issue_times,
+                                     telemetry, df_idx, AC_rating,
+                                     runtime, metadata, aggregate_function) {
 
   df[df_idx, "Runtime [sec]"] <- runtime
+  quantiles=seq(0.01, 0.99, by=0.01)
+
+  # Collect average metrics across the forecast runs
+  forecast_run_metrics <- sapply(seq_along(issue_times), FUN=get_metrics_for_single_run,
+                                 forecast_runs=forecast_runs, issue_times=issue_times,
+                                 metadata=metadata, telemetry=telemetry)
+  # Average of averages (or sum or sums)
+  average_metrics <- sapply(seq_len(dim(forecast_run_metrics)[1]),
+                            FUN=function(i) do.call(aggregate_function[[i]], list(forecast_run_metrics[i,])))
+
+  df[df_idx, 1+seq_along(average_metrics)] <- average_metrics
+
+  # Name this row by site
+  rownames(df)[df_idx] <- forecast_runs[[1]]$location
+  return(df)
+}
+
+
+#' Get a vector of the average metrics over a single forecast run
+#'
+#' @param i Index of forecast run in the list of forecast_runs and issue_times
+#' @param forecast_runs A list of ts_forecast object
+#' @param issue_times A list of timestamps, same length as forecast_runs
+#' @param metadata A data.frame of forecast parameters
+#' @param telemetry Vector of telemetry
+#' @return A vector of average metrics
+get_metrics_for_single_run <- function(i, forecast_runs, issue_times, metadata, telemetry) {
+
+  # Find the corresponding subset of telemetry data for this forecast run
+  t_idx_series <- sapply(1:metadata$horizon, FUN=issue_2_valid_index,
+                         issue=issue_times[[i]], metadata=metadata, telemetry=telemetry)
+  tel_test <- telemetry$data[t_idx_series]
 
   # Calculate results
-  stats <- forecasting::get_sundown_and_NaN_stats(ts, tel_test, agg=TRUE)
-  df[df_idx, "missing_sunup_rate_1hr"] <- stats$`Sunup missing telemetry rate`
-  df[df_idx, "number_validatable_forecasts"] <- stats$`Validatable forecasts`
-  quantiles=seq(0.01, 0.99, by=0.01)
-  qs <- forecasting::QS(ts, tel_test, quantiles)
-  df[df_idx, "CRPS"] <- forecasting::qwCRPS(ts, tel_test, weighting="none", quantiles=quantiles, qs=qs)/AC_rating
-  df[df_idx, "CRPS tails"] <- forecasting::qwCRPS(ts, tel_test, weighting="tails", quantiles=quantiles, qs=qs)/AC_rating
-  df[df_idx, "CRPS left"] <- forecasting::qwCRPS(ts, tel_test, weighting="left", quantiles=quantiles, qs=qs)/AC_rating
-  df[df_idx, "CRPS right"] <- forecasting::qwCRPS(ts, tel_test, weighting="right", quantiles=quantiles, qs=qs)/AC_rating
-  df[df_idx, "CRPS center"] <- forecasting::qwCRPS(ts, tel_test, weighting="center", quantiles=quantiles, qs=qs)/AC_rating
-  df[df_idx, "90% interval width"] <- forecasting::sharpness_avg(ts, tel_test, alpha=.10, normalize.by=AC_rating, agg=TRUE)$mean
-  df[df_idx, "MAE"] <- forecasting::MAE(ts, tel_test, normalize.by=AC_rating, agg=TRUE)
+  stats <- forecasting::get_sundown_and_NaN_stats(forecast_runs[[i]], tel_test)
+
+  qs <- forecasting::QS(forecast_runs[[i]], tel_test, quantiles)
+  crps_unweighted <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="none", quantiles=quantiles, qs=qs)/AC_rating
+  crps_tails <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="tails", quantiles=quantiles, qs=qs)/AC_rating
+  crps_left <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="left", quantiles=quantiles, qs=qs)/AC_rating
+  crps_right <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="right", quantiles=quantiles, qs=qs)/AC_rating
+  crps_center <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="center", quantiles=quantiles, qs=qs)/AC_rating
+  interval_width <- forecasting::sharpness_avg(forecast_runs[[i]], tel_test, alpha=.10, normalize.by=AC_rating)$mean
+  mae <- forecasting::MAE(forecast_runs[[i]], tel_test, normalize.by=AC_rating)
+
+  results <- c(stats$`Sunup missing telemetry rate`, stats$`Validatable forecasts`,
+               crps_unweighted, crps_tails, crps_left, crps_right, crps_center,
+               interval_width, mae)
+
   # Extract geometry code summary statistics
-  if (forecast_type %in% c("bma_sliding", "bma_time-of-day")) {
-    for (key in names(ts$forecasts[!is.na(ts$forecasts)][[1]]$geometry_codes))
-      df[df_idx, key] <- sum(sapply(ts$forecasts[!is.na(ts$forecasts)], FUN=function(fc) return(fc$geometry_codes[[key]])))
+  if (metadata$forecast_type %in% c("bma_sliding", "bma_time-of-day")) {
+    for (key in names(forecast_runs[[i]]$forecasts[!is.na(forecast_runs[[i]]$forecasts)][[1]]$geometry_codes))
+      results <- c(results, sum(sapply(forecast_runs[[i]]$forecasts[!is.na(forecast_runs[[i]]$forecasts)],
+                                   FUN=function(fc) return(fc$geometry_codes[[key]]))))
   }
-  # Name this row by site
-  rownames(df)[df_idx] <- ts$location
-  return(df)
+  return(results)
 }
 
 #' Export a [issue time x step x quantile] array of quantiles to HDF5 format
@@ -106,7 +131,7 @@ export_quantiles_to_h5 <- function(forecast_runs, fname) {
   results <- get_quantile_array(forecast_runs)
 
   dims <- mapply(ncdf4::ncdim_def, name=c('Issue_index', 'Step_index', "Percentile"), units=c('', '', '%'),
-                 vals=list(seq(dim(quantile_forecasts)[1]), seq(dim(quantile_forecasts)[2]), results$percents),
+                 vals=list(seq(dim(results$quantiles)[1]), seq(dim(results$quantiles)[2]), results$percents),
                  longname=c("Index in the sequence of issue times",
                             "Index in the number of steps from the issue time",
                             "Percentile (out of 100%)"),

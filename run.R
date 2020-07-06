@@ -203,12 +203,9 @@ runtime <- t_f$toc - t_f$tic
 export_quantiles_to_h5(forecast_runs,
                       fname=file.path(runtime_data_dir, paste("quantiles site ", site, ".h5", sep="")))
 
-
 # Save the run time data in R
 data_fname <- paste("data site ", site, ".RData", sep="")
 save(forecast_runs, issue_times, telemetry, ensemble, runtime, AC_rating, metadata,
      file=file.path(runtime_data_dir, data_fname))
-
-export_metrics_to_csv(out_dir, runtime_data_dir, metadata)
 
 tictoc::toc()

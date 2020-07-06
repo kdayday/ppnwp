@@ -4,22 +4,15 @@
 \alias{export_metrics_to_csv}
 \title{Export forecasting metrics to .csv}
 \usage{
-export_metrics_to_csv(out_dir, runtime_data_dir, metadata,
-  export_plots = F)
+export_metrics_to_csv(out_dir, runtime_data_dir)
 }
 \arguments{
-\item{out_dir}{Main output directory to save graphs}
+\item{out_dir}{Main output directory to save .csv}
 
 \item{runtime_data_dir}{Directory where .Rdata results are saved}
-
-\item{metadata}{A data.frame of forecast parameters}
-
-\item{export_plots}{Boolean flag (default=False)}
 }
 \description{
 Cycles through forecasts in the runtime_data_dir (presumably organized by
 site) to assess metrics, including CRPS (weighted and unweighted) and data
-quality metrics. If "export_plots" is selected, this will generate
-reliability, sharpness, quantile score, and PIT histogram plots *for each
-site*.
+quality metrics.
 }
