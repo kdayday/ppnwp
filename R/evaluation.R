@@ -92,3 +92,47 @@ add_metrics_to_dataframe <- function(df, ts, tel_test, df_idx, AC_rating,
   rownames(df)[df_idx] <- ts$location
   return(df)
 }
+
+#' Export a [issue time x step x quantile] array of quantiles to HDF5 format
+#'
+#' Quantile forecasts are extracted from the list of ts_forecast objects and
+#' exported in array format to an HDF5 file. Can equivalently export a file
+#' with a NetCDF extension; ncdf4 package is used for NetCDF/HDF5 handling.
+#'
+#' @param forecast_runs A list of ts_forecast objects
+#' @param fname Path to output file
+#' @export
+export_quantiles_to_h5 <- function(forecast_runs, fname) {
+  results <- get_quantile_array(forecast_runs)
+
+  dims <- mapply(ncdf4::ncdim_def, name=c('Issue_index', 'Step_index', "Percentile"), units=c('', '', '%'),
+                 vals=list(seq(dim(quantile_forecasts)[1]), seq(dim(quantile_forecasts)[2]), results$percents),
+                 longname=c("Index in the sequence of issue times",
+                            "Index in the number of steps from the issue time",
+                            "Percentile (out of 100%)"),
+                 SIMPLIFY = FALSE)
+  qvar <- ncdf4::ncvar_def("Power", "MW", dims, missval=NA, longname="Power", compression = 9)
+
+  nc <- ncdf4::nc_create(fname, qvar, force_v4=TRUE)
+  ncdf4::ncvar_put(nc, qvar, results$quantiles, count=qvar[['varsize']])
+  ncdf4::nc_close(nc)
+}
+
+#' Extract an [issue time x step x quantile] array of quantile forecasts
+#'
+#' Quantile forecasts are extracted from the list of ts_forecast objects (each
+#' an individual forecast run), at the resolution within the prob_forecast
+#' objects (defaults to 0.1%)
+#'
+#' @param forecast_runs A list of ts_forecast objects
+#' @return a [issue time x step x quantile] array
+#' @export
+get_quantile_array <- function(forecast_runs) {
+  percents <- 100*forecast_runs[[1]]$forecasts[[which(sapply(forecast_runs[[1]]$forecasts, is.prob_forecast))[1]]]$quantiles$q
+  num_quantiles <- length(percents)
+  q <- sapply(forecast_runs, FUN = function(ts) sapply(ts$forecasts, FUN = function(f) {
+    if (is.prob_forecast(f)) return(f$quantiles$x) else return(rep(0, times=num_quantiles))
+  }, simplify="array"), simplify="array")
+  q <- aperm(q, c(3,2,1))
+  return(list(percents=percents, quantiles=q))
+}
