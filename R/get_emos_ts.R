@@ -64,7 +64,7 @@ train_emos <- function(t_idx_series, ensemble, telemetry, sun_up, site,
       if (!sun_up[t_idx_series[i]]) {
         model <- NA
       } else {
-        if (metadata$forecast_type == "sliding_emos") {
+        if (metadata$forecast_type == "emos_sliding") {
           time_idx_train <- sort(t_idx_series[i] - seq_len(metadata$training_window))
         } else {  # metadata$forecast_type == "time-of-day"
           time_idx_train <- sort(t_idx_series[i] + c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
