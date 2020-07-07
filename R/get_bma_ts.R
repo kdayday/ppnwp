@@ -96,6 +96,7 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
                                                                                     length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
                                                      seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
       }
+      time_idx_train <- time_idx_train[sun_up[time_idx_train]]
       # Subset right into normalize
       ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metadata)/AC_rating
       tel_subset <- telemetry$data[time_idx_train]/AC_rating
