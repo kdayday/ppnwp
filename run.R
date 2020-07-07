@@ -185,7 +185,8 @@ if (metadata$is_rolling) {
   issue_times <- metadata$date_first_valid
 } else {
   sun_up <- sapply(telemetry$validtime, FUN=function(valid) {
-    sun_up[valid_2_issue_index(valid, metadata, ensemble)]})
+    ind <- valid_2_issue_index(valid, metadata, ensemble)
+    sun_up[ind[1], ind[2]]})
   issue_times <- ensemble$issuetime[which(ensemble$issuetime==metadata$date_first_issue):length(ensemble$issuetime)]
 }
 
