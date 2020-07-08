@@ -4,11 +4,11 @@
 \alias{get_chpeen_ts}
 \title{Get time-series forecast using CH-PeEn method}
 \usage{
-get_chpeen_ts(first_valid_time, t_idx_series, telemetry, sun_up, site,
-  AC_rating, metadata)
+get_chpeen_ts(issue, t_idx_series, telemetry, sun_up, site, AC_rating,
+  metadata)
 }
 \arguments{
-\item{first_valid_time}{A time stamp}
+\item{issue}{A time stamp}
 
 \item{t_idx_series}{Series of time indices to forecast, relative to the
 telemetry time indices}

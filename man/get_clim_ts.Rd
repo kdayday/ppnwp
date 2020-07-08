@@ -4,10 +4,10 @@
 \alias{get_clim_ts}
 \title{Get time-series forecast using climatology}
 \usage{
-get_clim_ts(first_valid_time, telemetry, sun_up, site, AC_rating, metadata)
+get_clim_ts(issue, telemetry, sun_up, site, AC_rating, metadata)
 }
 \arguments{
-\item{first_valid_time}{A time stamp}
+\item{issue}{A time stamp}
 
 \item{telemetry}{A list of data=vector of telemetry and validtime=vector of
 POSIXct times}

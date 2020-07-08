@@ -4,7 +4,7 @@
 #' time-of-day, or constant training method, then forecasts using the current
 #' NWP ensemble.
 #' @family ts_training_forecast
-#' @param first_valid_time A time stamp
+#' @param issue A time stamp
 #' @param t_idx_series Series of time indices to forecast, relative to the
 #'   telemetry time indices
 #' @param ens_test [time x member] matrix of ensemble data for test period
@@ -20,7 +20,7 @@
 #' @param lm_formula Formula for BMA linear regression
 #' @return A ts_forecast object
 #' @export
-get_bma_ts <- function(first_valid_time, t_idx_series, ens_test, ensemble, telemetry, sun_up,
+get_bma_ts <- function(issue, t_idx_series, ens_test, ensemble, telemetry, sun_up,
                        site, AC_rating, metadata, lm_formula){
   # Train
   if (metadata$forecast_type %in% c("bma_sliding", "bma_time-of-day")) {
@@ -32,7 +32,8 @@ get_bma_ts <- function(first_valid_time, t_idx_series, ens_test, ensemble, telem
   } else stop("Unrecognized BMA training method.")
 
   # Forecast
-  ts <- forecasting::ts_forecast(ens_test, first_valid_time,
+  ts <- forecasting::ts_forecast(ens_test,
+                    issue + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)),
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'bma', MoreTSArgs = list(model=models),

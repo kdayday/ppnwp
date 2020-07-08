@@ -4,7 +4,7 @@
 #' The training telemetry could either be the test sample or a historical
 #' period.
 #' @family ts_training_forecast
-#' @param first_valid_time A time stamp
+#' @param issue A time stamp
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
 #' @param sun_up A vector of booleans, indexed by telemetry valid times
@@ -13,7 +13,7 @@
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
-get_clim_ts <- function(first_valid_time, telemetry, sun_up, site, AC_rating, metadata){
+get_clim_ts <- function(issue, telemetry, sun_up, site, AC_rating, metadata){
 
   warning("Climatology treats each issue time as a separate training set.")
 
@@ -24,7 +24,7 @@ get_clim_ts <- function(first_valid_time, telemetry, sun_up, site, AC_rating, me
                          else rep(0, times=sum(valid_idx)), simplify="array"))
 
   # Forecast
-  ts <- forecasting::ts_forecast(data.input, first_valid_time,
+  ts <- forecasting::ts_forecast(data.input, issue + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)),
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'empirical',
