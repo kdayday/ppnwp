@@ -61,7 +61,8 @@ train_bma <- function(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating
   tictoc::tic("Total BMA model fit time: ")
 
   # Cycle through time_points in the benchmark
-  bma_models <- lapply(t_idx_series, FUN=train_bma_subfunc, ensemble=ensemble, telemetry=telemetry,
+  bma_models <- lapply(seq_along(t_idx_series), FUN=train_bma_subfunc, t_idx_series=t_idx_series,
+                       ensemble=ensemble, telemetry=telemetry,
                        sun_up=sun_up, site=site, AC_rating=AC_rating,
                        metadata=metadata, lm_formula=lm_formula)
   tictoc::toc()
@@ -71,7 +72,9 @@ train_bma <- function(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating
 #' Subfunction to get BMA model for individual time-point using sliding or
 #' time-of-day training
 #'
-#' @param time_idx_forecast Time index
+#' @param step Step (index) in this forecast run
+#' @param t_idx_series Series of time indices in forecast run, relative to the
+#'   telemetry time indices
 #' @param ensemble A list of data=[issue x step x member] array of all
 #'   ensemble data (historical + test) and issuetime=vector of POSIXct time
 #'   stamps
@@ -82,24 +85,21 @@ train_bma <- function(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating
 #' @param AC_rating Site's AC power rating
 #' @param metadata A data.frame of forecast parameters
 #' @param lm_formula Formula for BMA linear regression
-train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
+train_bma_subfunc <- function(step, t_idx_series, ensemble, telemetry, sun_up,
                               site, AC_rating, metadata, lm_formula) {
+  time_idx_forecast <- t_idx_series[step]
+
   model <- tryCatch({
     # Skip training if sun is down
     if (!sun_up[time_idx_forecast]) {
       model <- NA
     } else {
-      if (metadata$forecast_type == "bma_sliding") {
-        time_idx_train <- sort(time_idx_forecast - seq_len(metadata$training_window))
-      } else {  # metadata$forecast_type == "bma_time-of-day"
-        time_idx_train <- sort(time_idx_forecast + c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
-                                                                                    length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
-                                                     seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
-      }
-      time_idx_train <- time_idx_train[sun_up[time_idx_train]]
-      # Subset right into normalize
-      ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metadata)/AC_rating
-      tel_subset <- telemetry$data[time_idx_train]/AC_rating
+
+      training_data <- get_training_subsets(time_idx_forecast, step, metadata, ensemble, telemetry)
+      # Normalize subsets
+      ens_subset <- training_data$ens_subset/AC_rating
+      tel_subset <- training_data$tel_subset/AC_rating
+
       # Do not train if data is missing. There must be at least 2 data points for regression and observations can't be 0 only.
       if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {return(NA)}
       # MoreTSArgs has to come before the other optional inputs
@@ -137,7 +137,15 @@ train_constant_bma <- function(t_idx_series, ensemble, telemetry, sun_up,
 
   time_idx_train <- 1:(t_idx_series[1]-1)
 
-  ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metdata)/AC_rating
+  if (metadata$is_rolling) {
+    # ensemble sizing is [1 x all steps x member]
+    ens_subset <- ensemble$data[1, time_idx_train, ]/AC_rating
+  } else {
+    ens_subset <- t(sapply(time_idx_train, FUN=function(valid) {
+        ind <- valid_2_issue_index(telemetry$validtime[valid], metadata, ensemble)
+        ensemble$data[ind[1], ind[2],]}))/AC_rating
+  }
+
   tel_subset <- telemetry$data[time_idx_train]/AC_rating
   tictoc::tic("Single model model fit time: ")
   model <- bma_ens_models(tel_subset, ens_subset, bma_distribution=metadata$bma_distribution,

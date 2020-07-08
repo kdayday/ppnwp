@@ -64,17 +64,12 @@ train_emos <- function(t_idx_series, ensemble, telemetry, sun_up, site,
       if (!sun_up[t_idx_series[i]]) {
         model <- NA
       } else {
-        if (metadata$forecast_type == "emos_sliding") {
-          time_idx_train <- sort(t_idx_series[i] - seq_len(metadata$training_window))
-        } else {  # metadata$forecast_type == "time-of-day"
-          time_idx_train <- sort(t_idx_series[i] + c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
-                                                                                    length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
-                                                     seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
-        }
-        time_idx_train <- time_idx_train[sun_up[time_idx_train]]
+
+        training_data <- get_training_subsets(t_idx_series[i], i, metadata, ensemble, telemetry)
         # Subset. No normalization as in BMA training.
-        ens_subset <- get_training_ensemble_from_validtimes(time_idx_train, ensemble, metadata)
-        tel_subset <- telemetry$data[time_idx_train]
+        ens_subset <- training_data$ens_subset
+        tel_subset <- training_data$tel_subset
+
         # Do not train if data is missing. There must be at least 2 data points for regression and observations can't be 0 only.
         if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {
           model <- NA

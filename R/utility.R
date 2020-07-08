@@ -27,6 +27,8 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
     ensemble_issue_times <- date_start
   } else {
     # All issue times in the data set, which may include some training data
+    # Currently getting all forecast runs issued in the intervening period,
+    # even if the horizons extend beyond the last valid time
     ensemble_issue_times <- seq(from=date_start, to=metadata$date_last_valid,
                                 by=paste(metadata$update_rate, "hours"))
   }
@@ -309,21 +311,58 @@ issue_2_valid_index <- function(issue, step, metadata, telemetry) {
           telemetry$validtime)
 }
 
-#' Subset ensemble data to get BMA/EMOS training data
+#' Get subsets of ensemble and telemetry data for BMA/EMOS training
 #'
-#' This function will need to be expanded for full functionality of non-rolling forecasts
+#' Implements different strategies based on on sliding/time-of-day training and
+#' rolling/non-rolling formats. For non-rolling forecasts, sliding training
+#' generates only a single model at the issue time using the sequence of data up
+#' until one step before issue. Time-of-day training generates unique models for
+#' each step in the run, matching the observations from previous days to the
+#' forecast issued at the same total lookahead time (lead time + partial
+#' horizon).
 #'
-#' @param time_idx_train Vector of time-point indices, relative to telemetry's valid times
-#' @param ensemble A list of data=[issue x step x member] array of all
-#'   ensemble data (historical + test) and issuetime=vector of POSIXct time
-#'   stamps
+#' @param time_idx_forecast Index of forecast time, relative to telemetry's
+#'   valid times
+#' @param step Step (index) in this forecast run
 #' @param metadata A data.frame of forecast parameters
+#' @param ensemble A list of data=[issue x step x member] array of all ensemble
+#'   data (historical + test) and issuetime=vector of POSIXct time stamps
+#' @param telemetry A list of data=vector of telemetry and validtime=vector of
+#'   POSIXct times
 #' @export
-get_training_ensemble_from_validtimes <- function(time_idx_train, ensemble, metadata) {
+get_training_subsets <- function(time_idx_forecast, step, metadata, ensemble, telemetry) {
+  if (grepl("sliding", metadata$forecast_type, fixed=T)) {
+    time_idx_train <- sort(time_idx_forecast - seq_len(metadata$training_window))
+  } else {  # metadata$forecast_type == "time-of-day"
+    time_idx_train <- sort(time_idx_forecast +
+                             c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
+                                                              length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
+                               seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
+  }
+  time_idx_train <- time_idx_train[sun_up[time_idx_train]]
+
+  # This option includes both the sliding and TOD options for rolling forecasts
   if (metadata$is_rolling) {
     # ensemble sizing is [1 x all steps x member]
-    return(ensemble$data[1, time_idx_train, ])
+    ens_subset <- ensemble$data[1, time_idx_train, ]
+  # For non-rolling forecasts, sliding and TOD options have to be handled separately
   } else {
-    stop("Not implemented yet")
+    # Sliding approach finds forecast from the most recent issue time
+    if (grepl("sliding", metadata$forecast_type, fixed=T)) {
+      ens_subset <- t(sapply(time_idx_train, FUN=function(valid) {
+        ind <- valid_2_issue_index(telemetry$validtime[valid], metadata, ensemble)
+        ensemble$data[ind[1], ind[2],]}))
+    # Time-of-day approach finds the issue time that gives the same horizon as the
+    # time point of interest
+    } else  {
+      ens_subset <-t(sapply(time_idx_train, FUN=function(valid) {
+        matched_issue_time <- ensemble$issuetime[max(which(ensemble$issuetime <= (telemetry$validtime[valid]-lubridate::hours(metadata$lead_time))))] -
+          lubridate::hours(metadata$update_rate*(((step-1)*metadata$resolution)%/%metadata$update_rate))
+        ind <- valid_2_issue_index(telemetry$validtime[valid], metadata, ensemble, issue=matched_issue_time)
+        ensemble$data[ind[1], ind[2],]}))
+    }
   }
+
+  tel_subset <- telemetry$data[time_idx_train]
+  return(list(ens_subset=ens_subset, tel_subset=tel_subset))
 }
