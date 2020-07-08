@@ -118,7 +118,8 @@ train_bma_subfunc <- function(time_idx_forecast, ensemble, telemetry, sun_up,
 
 #' Subfunction to get single, constant BMA model for all time-points
 #'
-#' @param time_idx_forecast Time index
+#' @param t_idx_series Series of time indices to forecast, relative to the
+#'   telemetry time indices
 #' @param ensemble A list of data=[issue x step x member] array of all
 #'   ensemble data (historical + test) and issuetime=vector of POSIXct time
 #'   stamps
