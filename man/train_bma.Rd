@@ -11,9 +11,8 @@ train_bma(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating,
 \item{t_idx_series}{Series of time indices to forecast, relative to the
 telemetry time indices}
 
-\item{ensemble}{A list of data=[issue x step x member] array of all
-ensemble data (historical + test) and issuetime=vector of POSIXct time
-stamps}
+\item{ensemble}{A list of data=[issue x step x member] array of all ensemble
+data (historical + test) and issuetime=vector of POSIXct time stamps}
 
 \item{telemetry}{A list of data=vector of telemetry and validtime=vector of
 POSIXct times}
@@ -29,5 +28,9 @@ POSIXct times}
 \item{lm_formula}{Formula for BMA linear regression}
 }
 \description{
-Subfunction to get BMA models using sliding or time-of-day training
+There are four possible training methods, with combinations of
+sliding/time-of-day and rolling/non-rolling forecasts. Sliding/non-rolling
+forecasts will only train a single model at the issue time, then apply that
+model over the forecast run. The other three combinations will generate
+unique models at each valid time.
 }

@@ -330,9 +330,9 @@ issue_2_valid_index <- function(issue, step, metadata, telemetry) {
 #' @param telemetry A list of data=vector of telemetry and validtime=vector of
 #'   POSIXct times
 #' @export
-get_training_subsets <- function(time_idx_forecast, step, metadata, ensemble, telemetry) {
+get_training_subsets <- function(time_idx_forecast, issue, step, metadata, ensemble, telemetry) {
   if (grepl("sliding", metadata$forecast_type, fixed=T)) {
-    time_idx_train <- sort(time_idx_forecast - seq_len(metadata$training_window))
+    time_idx_train <- sort(which(telemetry$validtime==issue) - seq_len(metadata$training_window))
   } else {  # metadata$forecast_type == "time-of-day"
     time_idx_train <- sort(time_idx_forecast +
                              c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,

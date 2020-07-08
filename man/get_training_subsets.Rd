@@ -4,7 +4,7 @@
 \alias{get_training_subsets}
 \title{Get subsets of ensemble and telemetry data for BMA/EMOS training}
 \usage{
-get_training_subsets(time_idx_forecast, step, metadata, ensemble,
+get_training_subsets(time_idx_forecast, issue, step, metadata, ensemble,
   telemetry)
 }
 \arguments{
