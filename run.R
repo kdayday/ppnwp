@@ -148,9 +148,6 @@ dir.create(out_dir, showWarnings = FALSE)
 runtime_data_dir <- file.path(out_dir, "Runtime data")
 dir.create(runtime_data_dir, showWarnings = FALSE)
 
-# Begin by saving metadata to file separately
-write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
-
 # ----------------------------------------------------------------------
 # Time-series data load in
 # ----------------------------------------------------------------------
@@ -200,6 +197,9 @@ for (i in seq_along(issue_times)){
 }
 t_f <- tictoc::toc() # Forecast time
 runtime <- t_f$toc - t_f$tic
+
+# Begin by saving metadata to file separately
+write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
 
 export_quantiles_to_h5(forecast_runs,
                       fname=file.path(runtime_data_dir, paste("quantiles site ", site, ".h5", sep="")))
