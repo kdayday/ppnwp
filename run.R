@@ -109,8 +109,8 @@ date_training_start <- switch(metadata$forecast_type,
                               "peen" = metadata$date_first_issue - 2*days(metadata$training_window), # Add an expanded window to ensure enough non-NA points are available
                               "ch-peen" = metadata$date_first_issue-years(1),
                               "bma_constant" = metadata$date_first_issue-years(1),
-                              "bma_sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
-                              "emos_sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
+                              "bma_sliding" = metadata$date_first_issue - days(ceiling((metadata$training_window+metadata$lead_time)/24)),
+                              "emos_sliding" = metadata$date_first_issue - days(ceiling((metadata$training_window+metadata$lead_time)/24)),
                               "bma_time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
                               "emos_time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
                               stop("unknown forecast type"))
