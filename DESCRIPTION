@@ -3,6 +3,8 @@ Title: Post-Process Numerical Weather Prediction ensembles
 Version: 0.0.0.9000
 Author: person("Kate", "Doubleday", email = "kate.doubleday@nrel.gov",
                   role = c("aut", "cre"))
+	person("Megan", "Kerins", email = "megan.kerins@nrel.gov",
+                  role = c("aut"))
 Maintainer: Kate Doubleday <kate.doubleday@nrel.gov>  
 Description: This package (or set of scripts) contains run scripts
 	that build off of the forecasting package to post-process
