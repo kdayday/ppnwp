@@ -148,6 +148,9 @@ dir.create(out_dir, showWarnings = FALSE)
 runtime_data_dir <- file.path(out_dir, "Runtime data")
 dir.create(runtime_data_dir, showWarnings = FALSE)
 
+quantile_data_dir <- file.path(out_dir, "Quantile data")
+dir.create(quantile_data_dir, showWarnings = FALSE)
+
 # ----------------------------------------------------------------------
 # Time-series data load in
 # ----------------------------------------------------------------------
@@ -203,7 +206,7 @@ runtime <- t_f$toc - t_f$tic
 write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
 
 export_quantiles_to_h5(forecast_runs,
-                      fname=file.path(runtime_data_dir, paste("quantiles site ", site, ".h5", sep="")))
+                      fname=file.path(quantile_data_dir, paste("quantiles site ", site, ".h5", sep="")))
 
 # Save the run time data in R
 data_fname <- paste("data site ", site, ".RData", sep="")
