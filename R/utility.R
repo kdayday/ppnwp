@@ -193,14 +193,19 @@ check_maxar_parameters <- function(nc, metadata, site) {
 #'
 #' Selects either Maxar or NSRDB format and loads data vector
 #' Time-point selection is a consecutive sequence
+#' If the final forecast run(s) have a horizon that extends
+#' past the final valid telemetry point, the telemetry is
+#' buffered with NA's for those time points.
+#'
 #' @param fname file name
 #' @param site Site index
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
 #' @param date_start A lubridate: Start date of data to load
+#' @param date_last_issue A lubridate: Last issue time in the ensemble
 #' @return A list of data=vector of telemetry and validtime=vector of POSIXct times
 #' @export
-get_telemetry_data <- function(fname, site, metadata, date_start, ...) {
+get_telemetry_data <- function(fname, site, metadata, date_start, date_last_issue, ...) {
 
   # Open file
   nc <- ncdf4::nc_open(fname)
@@ -216,8 +221,14 @@ get_telemetry_data <- function(fname, site, metadata, date_start, ...) {
     ncdf4::nc_close(nc)
   })
 
-  timestamps <- seq(date_start, length.out = length(data),
-                              by = paste(metadata$resolution, "hour"))
+  timestamps <- seq(date_start, to = date_last_issue + lubridate::hours(metadata$lead_time + metadata$horizon - 1),
+                    by = paste(metadata$resolution, "hour"))
+
+  # If the final forecast extends past the available telemetry data,
+  # buffer with NA's
+  if (length(data) < length(timestamps)) {
+    data <- c(data, rep(NA, times=length(timestamps) - length(data)))
+  }
 
   return(list(data=data, validtime=timestamps))
 }

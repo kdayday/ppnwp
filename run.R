@@ -161,7 +161,8 @@ ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
 # Load telemetry list, including data as data vector over time and a validtime vector
 telemetry <- get_telemetry_data(file.path(data_dir, tel_name), site,
                                 metadata,
-                                date_training_start + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)))
+                                date_training_start + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)),
+                                ensemble$issuetime[length(ensemble$issuetime)])
 
 tictoc::toc()
 

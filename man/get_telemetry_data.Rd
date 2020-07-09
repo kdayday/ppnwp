@@ -4,7 +4,7 @@
 \alias{get_telemetry_data}
 \title{Get a vector of telemetry data}
 \usage{
-get_telemetry_data(fname, site, metadata, date_start, ...)
+get_telemetry_data(fname, site, metadata, date_start, date_last_issue, ...)
 }
 \arguments{
 \item{fname}{file name}
@@ -15,6 +15,8 @@ get_telemetry_data(fname, site, metadata, date_start, ...)
 time-steps per day, rolling or not, etc.}
 
 \item{date_start}{A lubridate: Start date of data to load}
+
+\item{date_last_issue}{A lubridate: Last issue time in the ensemble}
 }
 \value{
 A list of data=vector of telemetry and validtime=vector of POSIXct times
@@ -22,4 +24,7 @@ A list of data=vector of telemetry and validtime=vector of POSIXct times
 \description{
 Selects either Maxar or NSRDB format and loads data vector
 Time-point selection is a consecutive sequence
+If the final forecast run(s) have a horizon that extends
+past the final valid telemetry point, the telemetry is
+buffered with NA's for those time points.
 }
