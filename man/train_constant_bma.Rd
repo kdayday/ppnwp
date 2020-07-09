@@ -8,6 +8,9 @@ train_constant_bma(t_idx_series, ensemble, telemetry, sun_up, site,
   AC_rating, metadata, lm_formula)
 }
 \arguments{
+\item{t_idx_series}{Series of time indices to forecast, relative to the
+telemetry time indices}
+
 \item{ensemble}{A list of data=[issue x step x member] array of all
 ensemble data (historical + test) and issuetime=vector of POSIXct time
 stamps}
@@ -24,8 +27,6 @@ POSIXct times}
 \item{metadata}{A data.frame of forecast parameters}
 
 \item{lm_formula}{Formula for BMA linear regression}
-
-\item{time_idx_forecast}{Time index}
 }
 \description{
 Subfunction to get single, constant BMA model for all time-points

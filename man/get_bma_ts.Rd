@@ -4,11 +4,11 @@
 \alias{get_bma_ts}
 \title{Get time-series forecast using BMA post-processing of NWP ensembles}
 \usage{
-get_bma_ts(first_valid_time, t_idx_series, ens_test, ensemble, telemetry,
-  sun_up, site, AC_rating, metadata, lm_formula)
+get_bma_ts(issue, t_idx_series, ens_test, ensemble, telemetry, sun_up,
+  site, AC_rating, metadata, lm_formula)
 }
 \arguments{
-\item{first_valid_time}{A time stamp}
+\item{issue}{A time stamp}
 
 \item{t_idx_series}{Series of time indices to forecast, relative to the
 telemetry time indices}

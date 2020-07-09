@@ -30,9 +30,9 @@ maximum power}
 \item{AC_rating}{AC power rating}
 }
 \description{
-Loads in ensemble forecast data into the form: [day x issue x step x member]
+Loads in ensemble forecast data into the form: [issue x step x member]
 If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 x Hour x Site x Lead time x member] Maxar data can be loaded to either match
 the form above or in a "rolling" format over the course of the year in the
-form [1 x 1 x all steps x member] to make annual average metrics easier
+form [1 x all steps x member] to make annual average metrics easier
 }

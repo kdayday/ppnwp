@@ -46,18 +46,18 @@ library(lubridate)
 # ensemble_file -> Name of enemble forecast NetCDF file in the /data folder
 # group_directory -> Desired output folder name, used to group results runs together. Defaults to unique UUID.
 
-defaults <- list(forecast_type="raw",
+defaults <- list(forecast_type="bma_sliding",
                  bma_distribution= "beta",
                  lead_time=4,
                  resolution=1,
-                 horizon=72,
-                 update_rate=72,
-                 is_rolling=T,
+                 horizon=6,
+                 update_rate=6,
+                 is_rolling=F,
                  members = "1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41",
                  site = 1,
                  percent_clipping_threshold = 0.995,
                  date_first_issue = "20180101_00",
-                 date_last_valid = "20181231_23",
+                 date_last_valid = "20180101_23",
                  training_window = 72,
                  lm_intercept = FALSE,
                  telemetry_file="telemetry.nc",
@@ -109,8 +109,8 @@ date_training_start <- switch(metadata$forecast_type,
                               "peen" = metadata$date_first_issue - 2*days(metadata$training_window), # Add an expanded window to ensure enough non-NA points are available
                               "ch-peen" = metadata$date_first_issue-years(1),
                               "bma_constant" = metadata$date_first_issue-years(1),
-                              "bma_sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
-                              "emos_sliding" = metadata$date_first_issue - days(ceiling(metadata$training_window/24)),
+                              "bma_sliding" = metadata$date_first_issue - days(ceiling((metadata$training_window+metadata$lead_time)/24)),
+                              "emos_sliding" = metadata$date_first_issue - days(ceiling((metadata$training_window+metadata$lead_time)/24)),
                               "bma_time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
                               "emos_time-of-day" = metadata$date_first_issue - years(1) - days(metadata$training_window),
                               stop("unknown forecast type"))
@@ -148,8 +148,8 @@ dir.create(out_dir, showWarnings = FALSE)
 runtime_data_dir <- file.path(out_dir, "Runtime data")
 dir.create(runtime_data_dir, showWarnings = FALSE)
 
-# Begin by saving metadata to file separately
-write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
+quantile_data_dir <- file.path(out_dir, "Quantile data")
+dir.create(quantile_data_dir, showWarnings = FALSE)
 
 # ----------------------------------------------------------------------
 # Time-series data load in
@@ -164,7 +164,8 @@ ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
 # Load telemetry list, including data as data vector over time and a validtime vector
 telemetry <- get_telemetry_data(file.path(data_dir, tel_name), site,
                                 metadata,
-                                date_training_start + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)))
+                                date_training_start + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)),
+                                ensemble$issuetime[length(ensemble$issuetime)])
 
 tictoc::toc()
 
@@ -185,17 +186,31 @@ if (metadata$is_rolling) {
   issue_times <- metadata$date_first_valid
 } else {
   sun_up <- sapply(telemetry$validtime, FUN=function(valid) {
-    sun_up[valid_2_issue_index(valid, metadata, ensemble)]})
+    ind <- valid_2_issue_index(valid, metadata, ensemble)
+    sun_up[ind[1], ind[2]]})
   issue_times <- ensemble$issuetime[which(ensemble$issuetime==metadata$date_first_issue):length(ensemble$issuetime)]
 }
 
+forecast_runs <- vector(mode = "list", length = length(issue_times))
+
+tictoc::tic(paste("Total computation time for site ", site, sep=''))
 # Conduct forecast for each issue time (must sequence along or will return integer)
 for (i in seq_along(issue_times)){
-  forecast_by_issue_time(issue_times[i], ensemble, telemetry,
-                         sun_up, site, AC_rating, metadata,
-                         lm_formula, runtime_data_dir)
+  forecast_runs[[i]] <- forecast_by_issue_time(issue_times[i], ensemble, telemetry,
+                         sun_up, site, AC_rating, metadata, lm_formula)
 }
+t_f <- tictoc::toc() # Forecast time
+runtime <- t_f$toc - t_f$tic
 
-export_metrics_to_csv(out_dir, runtime_data_dir, metadata)
+# Begin by saving metadata to file separately
+write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
+
+export_quantiles_to_h5(forecast_runs,
+                      fname=file.path(quantile_data_dir, paste("quantiles site ", site, ".h5", sep="")))
+
+# Save the run time data in R
+data_fname <- paste("data site ", site, ".RData", sep="")
+save(forecast_runs, issue_times, telemetry, ensemble, runtime, AC_rating, metadata,
+     file=file.path(runtime_data_dir, data_fname))
 
 tictoc::toc()

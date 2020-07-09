@@ -4,10 +4,10 @@
 \alias{get_raw_ts}
 \title{Get time-series forecast of raw NWP ensemble}
 \usage{
-get_raw_ts(first_valid_time, ens_test, site, AC_rating, metadata)
+get_raw_ts(issue, ens_test, site, AC_rating, metadata)
 }
 \arguments{
-\item{first_valid_time}{A time stamp}
+\item{issue}{A time stamp}
 
 \item{ens_test}{[time x member] matrix of ensemble data for test period}
 

@@ -5,7 +5,7 @@
 \title{Conduct site-level forecasting with the desired method}
 \usage{
 forecast_by_issue_time(issue, ensemble, telemetry, sun_up, site, AC_rating,
-  metadata, lm_formula, runtime_data_dir)
+  metadata, lm_formula)
 }
 \arguments{
 \item{issue}{A lubridate time stamp of the issue time}
@@ -17,7 +17,7 @@ stamps}
 \item{telemetry}{A list of data=vector of telemetry and validtime=vector of
 POSIXct times}
 
-\item{sun_up}{A [day x issue x step] matrix of booleans}
+\item{sun_up}{An [issue x step] matrix of booleans}
 
 \item{site}{String, site name}
 
@@ -26,8 +26,6 @@ POSIXct times}
 \item{metadata}{A data.frame of forecast parameters}
 
 \item{lm_formula}{Formula for BMA linear regression}
-
-\item{runtime_data_dir}{Directory to save .Rdata results}
 }
 \description{
 For the given forecasting method, this function conducts the appropriate

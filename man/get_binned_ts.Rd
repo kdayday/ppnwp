@@ -4,10 +4,10 @@
 \alias{get_binned_ts}
 \title{Get time-series forecast of binned probability forecast}
 \usage{
-get_binned_ts(first_valid_time, ens_test, site, AC_rating, metadata)
+get_binned_ts(issue, ens_test, site, AC_rating, metadata)
 }
 \arguments{
-\item{first_valid_time}{A time stamp}
+\item{issue}{A time stamp}
 
 \item{ens_test}{[time x member] matrix of ensemble data}
 
