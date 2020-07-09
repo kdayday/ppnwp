@@ -60,7 +60,6 @@ add_metrics_to_dataframe <- function(df, forecast_runs, issue_times,
                                      runtime, metadata, aggregate_function) {
 
   df[df_idx, "Runtime [sec]"] <- runtime
-  quantiles=seq(0.01, 0.99, by=0.01)
 
   # Collect average metrics across the forecast runs
   forecast_run_metrics <- sapply(seq_along(issue_times), FUN=get_metrics_for_single_run,
@@ -87,6 +86,8 @@ add_metrics_to_dataframe <- function(df, forecast_runs, issue_times,
 #' @param telemetry Vector of telemetry
 #' @return A vector of average metrics
 get_metrics_for_single_run <- function(i, forecast_runs, issue_times, metadata, telemetry) {
+
+  quantiles=seq(0.01, 0.99, by=0.01)
 
   # Find the corresponding subset of telemetry data for this forecast run
   t_idx_series <- sapply(1:metadata$horizon, FUN=issue_2_valid_index,
