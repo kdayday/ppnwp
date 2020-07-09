@@ -1,15 +1,15 @@
 #' Load ensemble forecast data
 #'
-#' Loads in ensemble forecast data into the form: [issue x step x member]
+#' Loads in ensemble forecast data into the form: [day x issue x step x member]
 #' Also generates a list of validtime timestamps
 #'
 #' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 #' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
 #' the form above or in a "rolling" format over the course of the year in the
-#' form [1 x all steps x member] to make annual average metrics easier
+#' form [1 x 1 x all steps x member] to make annual average metrics easier
 #'
-#' If input file in in ECMWF format (via reV), assumes an h5 file of the
-#' dimensions: [issue x step x member]
+#' If input file in in ECMWF format, assumes a NETCDF file of the dimensions:
+#' [day x issue x step x member]
 #'
 #' @param fname file name
 #' @param members A vector of member indices
@@ -18,7 +18,7 @@
 #'   time-steps per day, rolling or not, etc.
 #' @param date_start Timestamp
 #' @param ... Additional parameters to load-in subfunctions
-#' @return A list of data=[issue x step x member] matrix and issuetime=a
+#' @return A list of data=[day x issue x step x member] matrix and issuetime=a
 #'   vector of POSIXct timestamps
 #' @export
 get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
@@ -27,21 +27,28 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
     ensemble_issue_times <- date_start
   } else {
     # All issue times in the data set, which may include some training data
-    # Currently getting all forecast runs issued in the intervening period,
-    # even if the horizons extend beyond the last valid time
     ensemble_issue_times <- seq(from=date_start, to=metadata$date_last_valid,
                                 by=paste(metadata$update_rate, "hours"))
   }
-
+  
   # Open file
   nc <- ncdf4::nc_open(fname)
+  
+  browser()
 
   data <- tryCatch({
     # Is this Maxar's format?
-    if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
+  
+      if (nc$ndims==5 & all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
       data <- get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times, ...)
-    } else stop("Unrecognized forecast file format; ECMWF format not implemented")
-    # TODO Megan to add ECMWF option
+    # Is this load data?
+      } else if (all(names(nc$dim)==c("issue",  "step", "member"))){
+      data <- ncvar_get(nc, attributes(nc$var)$names)
+      site <- 'ERCOT_all'
+    # Is this very short-term solar data?
+      } else if (all(names(nc$dim)==c("site", "lon", "lat",  "lev",  "time", "ens"))){
+      data <- ncvar_get(nc, attributes(nc$var)$names)
+      } else stop("Unrecognized forecast file format; ECMWF format not implemented")
   },  finally = {
     # Close the file!
     ncdf4::nc_close(nc)
@@ -52,11 +59,11 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 
 #' Subfunction to load in ECMWF data
 #'
-#' Loads in ensemble forecast data into the form: [issue x step x member]
+#' Loads in ensemble forecast data into the form: [day x issue x step x member]
 #' If input file is in Maxar form, assumes a NETCDF file of the dimensions: [Day
 #' x Hour x Site x Lead time x member] Maxar data can be loaded to either match
 #' the form above or in a "rolling" format over the course of the year in the
-#' form [1 x all steps x member] to make annual average metrics easier
+#' form [1 x 1 x all steps x member] to make annual average metrics easier
 #' @param nc An open NetCDF object
 #' @param members A vector of member indices
 #' @param site Site index
@@ -98,8 +105,8 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
       data[which(data > AC_rating)] <- AC_rating
     }
 
-    # Reformat to [issue x step x member] format, but use
-    # only a single issue time so that metrics for entire
+    # Reformat to [day x issue x step x member] format, but use
+    # only a single day/issue time so that metrics for entire
     # year can be calculated all at once
     data <- array(data, dim=c(1, ndays*metadata$ts_per_day, length(members)))
   } else {
@@ -119,7 +126,7 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
                    ensemble_issue_times=ensemble_issue_times, metadata=metadata, simplify="array")
     tictoc::toc()
 
-    # [step x issue x member] to [issue x step x member]
+    # [step x issue (rolling) x member] to [issue (rolling) x step x member]
     data <- aperm(data, perm=c(2,1,3))
   }
   return(data)
@@ -193,19 +200,14 @@ check_maxar_parameters <- function(nc, metadata, site) {
 #'
 #' Selects either Maxar or NSRDB format and loads data vector
 #' Time-point selection is a consecutive sequence
-#' If the final forecast run(s) have a horizon that extends
-#' past the final valid telemetry point, the telemetry is
-#' buffered with NA's for those time points.
-#'
 #' @param fname file name
 #' @param site Site index
 #' @param metadata Metadata list including date end, temporal parameters,
 #'   time-steps per day, rolling or not, etc.
 #' @param date_start A lubridate: Start date of data to load
-#' @param date_last_issue A lubridate: Last issue time in the ensemble
 #' @return A list of data=vector of telemetry and validtime=vector of POSIXct times
 #' @export
-get_telemetry_data <- function(fname, site, metadata, date_start, date_last_issue, ...) {
+get_telemetry_data <- function(fname, site, metadata, date_start, ...) {
 
   # Open file
   nc <- ncdf4::nc_open(fname)
@@ -214,6 +216,9 @@ get_telemetry_data <- function(fname, site, metadata, date_start, date_last_issu
     # Is this Maxar's format?
     if (all(names(nc$dim)==c('Day', 'Hour', 'SiteID'))){
       data <- get_maxar_telemetry(nc, site, metadata, date_start, ...)
+    # Is this load data?
+    } else if (all(names(nc$dim)==c('Day', 'Hour', 'Zone'))) {
+      data <- get_load_telemetry(nc, site, metadata, date_start, ...)
     } else stop("Unrecognized forecast file format; NSRDB format not implemented")
     # TODO Megan to add NSRDB option
   },  finally = {
@@ -221,14 +226,8 @@ get_telemetry_data <- function(fname, site, metadata, date_start, date_last_issu
     ncdf4::nc_close(nc)
   })
 
-  timestamps <- seq(date_start, to = date_last_issue + lubridate::hours(metadata$lead_time + metadata$horizon - 1),
-                    by = paste(metadata$resolution, "hour"))
-
-  # If the final forecast extends past the available telemetry data,
-  # buffer with NA's
-  if (length(data) < length(timestamps)) {
-    data <- c(data, rep(NA, times=length(timestamps) - length(data)))
-  }
+  timestamps <- seq(date_start, length.out = length(data),
+                              by = paste(metadata$resolution, "hour"))
 
   return(list(data=data, validtime=timestamps))
 }
@@ -259,6 +258,18 @@ get_maxar_telemetry <- function(nc, site, metadata, date_start,
   data <- as.vector(t(data))[seq(hour(date_start)+1,
                                  length.out=interval(date_start, metadata$date_last_valid)/hours(metadata$resolution)+1)]
 
+  return(data)
+}
+
+get_load_telemetry <- function(nc, site, metadata, date_start,
+                                date_data_start=lubridate::ymd(20160101),
+                                vname="hsl_power") {
+  
+  # Calculate netcdf date constants
+  data <- ncdf4::ncvar_get(nc, varid=vname, start=c(1,1,site), count=c(-1, -1, 1))
+  data <- as.vector(t(data))[seq(hour(date_start)+1,
+                                 length.out=interval(date_start, metadata$date_last_valid)/hours(metadata$resolution)+1)]
+  
   return(data)
 }
 
@@ -322,58 +333,21 @@ issue_2_valid_index <- function(issue, step, metadata, telemetry) {
           telemetry$validtime)
 }
 
-#' Get subsets of ensemble and telemetry data for BMA/EMOS training
+#' Subset ensemble data to get BMA/EMOS training data
 #'
-#' Implements different strategies based on on sliding/time-of-day training and
-#' rolling/non-rolling formats. For non-rolling forecasts, sliding training
-#' generates only a single model at the issue time using the sequence of data up
-#' until one step before issue. Time-of-day training generates unique models for
-#' each step in the run, matching the observations from previous days to the
-#' forecast issued at the same total lookahead time (lead time + partial
-#' horizon).
+#' This function will need to be expanded for full functionality of non-rolling forecasts
 #'
-#' @param time_idx_forecast Index of forecast time, relative to telemetry's
-#'   valid times
-#' @param step Step (index) in this forecast run
+#' @param time_idx_train Vector of time-point indices, relative to telemetry's valid times
+#' @param ensemble A list of data=[issue x step x member] array of all
+#'   ensemble data (historical + test) and issuetime=vector of POSIXct time
+#'   stamps
 #' @param metadata A data.frame of forecast parameters
-#' @param ensemble A list of data=[issue x step x member] array of all ensemble
-#'   data (historical + test) and issuetime=vector of POSIXct time stamps
-#' @param telemetry A list of data=vector of telemetry and validtime=vector of
-#'   POSIXct times
 #' @export
-get_training_subsets <- function(time_idx_forecast, issue, step, metadata, ensemble, telemetry) {
-  if (grepl("sliding", metadata$forecast_type, fixed=T)) {
-    time_idx_train <- sort(which(telemetry$validtime==issue) - seq_len(metadata$training_window))
-  } else {  # metadata$forecast_type == "time-of-day"
-    time_idx_train <- sort(time_idx_forecast +
-                             c(-365*metadata$ts_per_day + seq(-metadata$ts_per_day*metadata$training_window,
-                                                              length.out = 2*metadata$training_window+1, by=+metadata$ts_per_day),
-                               seq(-metadata$ts_per_day, length.out = metadata$training_window, by=-metadata$ts_per_day)))
-  }
-  time_idx_train <- time_idx_train[sun_up[time_idx_train]]
-
-  # This option includes both the sliding and TOD options for rolling forecasts
+get_training_ensemble_from_validtimes <- function(time_idx_train, ensemble, metadata) {
   if (metadata$is_rolling) {
     # ensemble sizing is [1 x all steps x member]
-    ens_subset <- ensemble$data[1, time_idx_train, ]
-  # For non-rolling forecasts, sliding and TOD options have to be handled separately
+    return(ensemble$data[1, time_idx_train, ])
   } else {
-    # Sliding approach finds forecast from the most recent issue time
-    if (grepl("sliding", metadata$forecast_type, fixed=T)) {
-      ens_subset <- t(sapply(time_idx_train, FUN=function(valid) {
-        ind <- valid_2_issue_index(telemetry$validtime[valid], metadata, ensemble)
-        ensemble$data[ind[1], ind[2],]}))
-    # Time-of-day approach finds the issue time that gives the same horizon as the
-    # time point of interest
-    } else  {
-      ens_subset <-t(sapply(time_idx_train, FUN=function(valid) {
-        matched_issue_time <- ensemble$issuetime[max(which(ensemble$issuetime <= (telemetry$validtime[valid]-lubridate::hours(metadata$lead_time))))] -
-          lubridate::hours(metadata$update_rate*(((step-1)*metadata$resolution)%/%metadata$update_rate))
-        ind <- valid_2_issue_index(telemetry$validtime[valid], metadata, ensemble, issue=matched_issue_time)
-        ensemble$data[ind[1], ind[2],]}))
-    }
+    stop("Not implemented yet")
   }
-
-  tel_subset <- telemetry$data[time_idx_train]
-  return(list(ens_subset=ens_subset, tel_subset=tel_subset))
 }
