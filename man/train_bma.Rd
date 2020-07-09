@@ -4,12 +4,14 @@
 \alias{train_bma}
 \title{Subfunction to get BMA models using sliding or time-of-day training}
 \usage{
-train_bma(t_idx_series, ensemble, telemetry, sun_up, site, AC_rating,
-  metadata, lm_formula)
+train_bma(t_idx_series, issue, ensemble, telemetry, sun_up, site,
+  AC_rating, metadata, lm_formula)
 }
 \arguments{
 \item{t_idx_series}{Series of time indices to forecast, relative to the
 telemetry time indices}
+
+\item{issue}{Time stamp of issue time}
 
 \item{ensemble}{A list of data=[issue x step x member] array of all ensemble
 data (historical + test) and issuetime=vector of POSIXct time stamps}
