@@ -42,11 +42,10 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
       data <- get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times, ...)
       # Is this load data?
     } else if (nc$ndims==3 && all(names(nc$dim)==c("issue",  "step", "member"))){
-      data <- ncvar_get(nc, attributes(nc$var)$names)
-      site <- 'ERCOT_all'
+      data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
       # Is this very short-term solar data?
     } else if (nc$ndims==6 && all(names(nc$dim)==c("site", "lon", "lat",  "lev",  "time", "ens"))){
-      data <- ncvar_get(nc, attributes(nc$var)$names)
+      data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
     } else stop("Unrecognized forecast file format; ECMWF format not implemented")
   },  finally = {
     # Close the file!

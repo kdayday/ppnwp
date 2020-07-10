@@ -21,6 +21,7 @@ Imports:
   uuid,
 	here,
 	lubridate,
+	ncdf4,
 	R.utils
 Suggests: 
   abind,
