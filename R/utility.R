@@ -214,6 +214,9 @@ get_telemetry_data <- function(fname, site, metadata, date_start, date_last_issu
     # Is this Maxar's format?
     if (all(names(nc$dim)==c('Day', 'Hour', 'SiteID'))){
       data <- get_maxar_telemetry(nc, site, metadata, date_start, ...)
+    # Is this load data?
+    } else if (all(names(nc$dim)==c('Day', 'Hour', 'Zone'))) {
+      data <- get_load_telemetry(nc, site, metadata, date_start, ...)
     } else stop("Unrecognized forecast file format; NSRDB format not implemented")
     # TODO Megan to add NSRDB option
   },  finally = {
@@ -259,6 +262,31 @@ get_maxar_telemetry <- function(nc, site, metadata, date_start,
   data <- as.vector(t(data))[seq(hour(date_start)+1,
                                  length.out=interval(date_start, metadata$date_last_valid)/hours(metadata$resolution)+1)]
 
+  return(data)
+}
+
+#' Load data from a NETCDF file of telemetry
+#'
+#' Assumed file dimensions: Day x Hour x Zone
+#' Time-point selection is a consecutive sequence
+#' @param nc Open NetCDF file
+#' @param zone Zone index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param date_start A lubridate: Start date of data to load
+#' @param date_data_start A lubridate: Date of first day in file
+#' @param vname NetCDF variable name
+#' @return A vector of telemetry
+#' @export
+get_load_telemetry <- function(nc, site, metadata, date_start,
+                                date_data_start=lubridate::ymd(20160101),
+                                vname="hsl_power") {
+  
+  # Calculate netcdf date constants
+  data <- ncdf4::ncvar_get(nc, varid=vname, start=c(1,1,site), count=c(-1, -1, 1))
+  data <- as.vector(t(data))[seq(hour(date_start)+1,
+                                 length.out=interval(date_start, metadata$date_last_valid)/hours(metadata$resolution)+1)]
+  
   return(data)
 }
 
