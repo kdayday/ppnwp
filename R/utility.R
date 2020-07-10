@@ -38,10 +38,16 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 
   data <- tryCatch({
     # Is this Maxar's format?
-    if (all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
+    if (nc$ndims==5 && all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
       data <- get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times, ...)
+      # Is this load data?
+    } else if (nc$ndims==3 && all(names(nc$dim)==c("issue",  "step", "member"))){
+      data <- ncvar_get(nc, attributes(nc$var)$names)
+      site <- 'ERCOT_all'
+      # Is this very short-term solar data?
+    } else if (nc$ndims==6 && all(names(nc$dim)==c("site", "lon", "lat",  "lev",  "time", "ens"))){
+      data <- ncvar_get(nc, attributes(nc$var)$names)
     } else stop("Unrecognized forecast file format; ECMWF format not implemented")
-    # TODO Megan to add ECMWF option
   },  finally = {
     # Close the file!
     ncdf4::nc_close(nc)
@@ -218,7 +224,6 @@ get_telemetry_data <- function(fname, site, metadata, date_start, date_last_issu
     } else if (all(names(nc$dim)==c('Day', 'Hour', 'Zone'))) {
       data <- get_load_telemetry(nc, site, metadata, date_start, ...)
     } else stop("Unrecognized forecast file format; NSRDB format not implemented")
-    # TODO Megan to add NSRDB option
   },  finally = {
     # Close the file!
     ncdf4::nc_close(nc)
@@ -281,12 +286,12 @@ get_maxar_telemetry <- function(nc, site, metadata, date_start,
 get_load_telemetry <- function(nc, site, metadata, date_start,
                                 date_data_start=lubridate::ymd(20160101),
                                 vname="hsl_power") {
-  
+
   # Calculate netcdf date constants
   data <- ncdf4::ncvar_get(nc, varid=vname, start=c(1,1,site), count=c(-1, -1, 1))
   data <- as.vector(t(data))[seq(hour(date_start)+1,
                                  length.out=interval(date_start, metadata$date_last_valid)/hours(metadata$resolution)+1)]
-  
+
   return(data)
 }
 
