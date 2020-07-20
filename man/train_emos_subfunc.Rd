@@ -6,7 +6,7 @@
 time-of-day training}
 \usage{
 train_emos_subfunc(step, t_idx_series, issue, ensemble, telemetry, sun_up,
-  site, AC_rating, metadata)
+  site, max_power, metadata)
 }
 \arguments{
 \item{step}{Step (index) in this forecast run}
@@ -27,7 +27,7 @@ POSIXct times}
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Site's AC power rating or maximum load}
 
 \item{metadata}{A data.frame of forecast parameters}
 }

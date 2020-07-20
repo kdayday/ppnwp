@@ -4,7 +4,7 @@
 \alias{get_clim_ts}
 \title{Get time-series forecast using climatology}
 \usage{
-get_clim_ts(issue, telemetry, sun_up, site, AC_rating, metadata)
+get_clim_ts(issue, telemetry, sun_up, site, max_power, metadata)
 }
 \arguments{
 \item{issue}{A time stamp}
@@ -16,7 +16,7 @@ POSIXct times}
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Site's AC power rating or maximum load}
 
 \item{metadata}{A data.frame of forecast parameters}
 }

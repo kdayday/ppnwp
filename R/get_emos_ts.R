@@ -15,21 +15,21 @@
 #'   POSIXct times
 #' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
-#' @param AC_rating Site's AC power rating
+#' @param max_power Site's AC power rating or maximum load
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
 get_emos_ts <- function(issue, t_idx_series, ens_test, ensemble, telemetry, sun_up,
-                        site, AC_rating, metadata){
+                        site, max_power, metadata){
 
   # Train
   models <- train_emos(t_idx_series, issue, ensemble, telemetry, sun_up, site,
-                        AC_rating, metadata)
+                        max_power, metadata)
   # Forecast
   ts <- forecasting::ts_forecast(ens_test, issue + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)),
                                  time_step=metadata$resolution, scale='site',
                                  location=site, method = 'emos',
-                                 MoreTSArgs = list(model=models), max_power=AC_rating)
+                                 MoreTSArgs = list(model=models), max_power=max_power)
   return(ts)
 }
 
@@ -45,16 +45,16 @@ get_emos_ts <- function(issue, t_idx_series, ens_test, ensemble, telemetry, sun_
 #'   POSIXct times
 #' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
-#' @param AC_rating Site's AC power rating
+#' @param max_power Site's AC power rating or maximum load
 #' @param metadata A data.frame of forecast parameters
 train_emos <- function(t_idx_series, issue, ensemble, telemetry, sun_up, site,
-                       AC_rating, metadata) {
+                       max_power, metadata) {
   tictoc::tic("Total EMOS model fit time: ")
 
   if (metadata$is_rolling & metadata$forecast_type == "emos_sliding") {
     model <- train_emos_subfunc(min(which(sun_up[t_idx_series])), t_idx_series, issue,
                                 ensemble, telemetry, sun_up,
-                               site, AC_rating, metadata)
+                               site, max_power, metadata)
 
     models <- lapply(t_idx_series, FUN=function(t) {if (!sun_up[t]) {return(NA)} else {model}})
   } else {
@@ -68,7 +68,7 @@ train_emos <- function(t_idx_series, issue, ensemble, telemetry, sun_up, site,
       if (i == 1) { par_init <- NA} else {par_init <- models[[i-1]]}
 
       model <- train_emos_subfunc(i, t_idx_series, ensemble, telemetry, sun_up,
-                                  site, AC_rating, metadata)
+                                  site, max_power, metadata)
 
       models[[i]] <- model
     }
@@ -92,10 +92,10 @@ train_emos <- function(t_idx_series, issue, ensemble, telemetry, sun_up, site,
 #'   POSIXct times
 #' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
-#' @param AC_rating Site's AC power rating
+#' @param max_power Site's AC power rating or maximum load
 #' @param metadata A data.frame of forecast parameters
 train_emos_subfunc <- function(step, t_idx_series, issue, ensemble, telemetry, sun_up,
-                               site, AC_rating, metadata) {
+                               site, max_power, metadata) {
 
   time_idx_forecast <- t_idx_series[step]
 
@@ -114,7 +114,7 @@ train_emos_subfunc <- function(step, t_idx_series, issue, ensemble, telemetry, s
       if (sum(apply(X=ens_subset, MARGIN = 1, FUN = function(v) {any(v>0 & !is.na(v))}) & (!is.na(tel_subset) & tel_subset > 0)) < 2) {
         model <- NA
       } else {
-        model <- emos_model(tel_subset, ens_subset, max_power=AC_rating, par_init=par_init)
+        model <- emos_model(tel_subset, ens_subset, max_power=max_power, par_init=par_init)
       }
     }
   }, error = function(e) {

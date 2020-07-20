@@ -5,7 +5,7 @@
 \title{Subfunction to get single, constant BMA model for all time-points}
 \usage{
 train_constant_bma(t_idx_series, ensemble, telemetry, sun_up, site,
-  AC_rating, metadata, lm_formula)
+  max_power, metadata, lm_formula)
 }
 \arguments{
 \item{t_idx_series}{Series of time indices to forecast, relative to the
@@ -22,7 +22,7 @@ POSIXct times}
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Site's AC power rating or maximum load}
 
 \item{metadata}{A data.frame of forecast parameters}
 

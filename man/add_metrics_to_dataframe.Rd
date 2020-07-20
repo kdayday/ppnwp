@@ -5,7 +5,7 @@
 \title{Fill one row of data.frame df with this site's metrics}
 \usage{
 add_metrics_to_dataframe(df, forecast_runs, issue_times, telemetry, df_idx,
-  AC_rating, runtime, metadata, aggregate_function)
+  max_power, runtime, metadata, aggregate_function)
 }
 \arguments{
 \item{df}{A data frame to fill with metrics for all the sites}
@@ -18,7 +18,7 @@ add_metrics_to_dataframe(df, forecast_runs, issue_times, telemetry, df_idx,
 
 \item{df_idx}{Index of data frame row (likely index of site)}
 
-\item{AC_rating}{Site's AC rating}
+\item{max_power}{Site's AC rating or maximum load power}
 
 \item{runtime}{A value in seconds}
 

@@ -9,11 +9,11 @@
 #'   POSIXct times
 #' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
-#' @param AC_rating Site's AC power rating
+#' @param max_power Site's AC power rating or maximum load
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
-get_clim_ts <- function(issue, telemetry, sun_up, site, AC_rating, metadata){
+get_clim_ts <- function(issue, telemetry, sun_up, site, max_power, metadata){
 
   warning("Climatology treats each issue time as a separate training set.")
 
@@ -28,6 +28,6 @@ get_clim_ts <- function(issue, telemetry, sun_up, site, AC_rating, metadata){
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'empirical',
-                    max_power=AC_rating)
+                    max_power=max_power)
   return(ts)
 }

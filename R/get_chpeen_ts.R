@@ -12,12 +12,12 @@
 #'   POSIXct times
 #' @param sun_up A vector of booleans, indexed by telemetry valid times
 #' @param site String, site name
-#' @param AC_rating Site's AC power rating
+#' @param max_power Site's AC power rating or maximum load
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
 get_chpeen_ts <- function(issue, t_idx_series, telemetry, sun_up, site,
-                          AC_rating, metadata){
+                          max_power, metadata){
 
   warning("CH-PeEn is currently ignores issue time and assumes most recent measurements are available.")
 
@@ -29,7 +29,7 @@ get_chpeen_ts <- function(issue, t_idx_series, telemetry, sun_up, site,
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'empirical',
-                    max_power=AC_rating)
+                    max_power=max_power)
   return(ts)
 }
 

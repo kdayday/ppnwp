@@ -15,7 +15,7 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir){
 
   for(f in seq_along(files)){
 
-    # Load in forecast_runs, telemetry, ensemble, AC_rating
+    # Load in forecast_runs, telemetry, ensemble, max_power
     load(file.path(runtime_data_dir , files[f]))
 
     # Include in for loop so that additions aren't appended every round
@@ -31,7 +31,7 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir){
     }
 
     df <- add_metrics_to_dataframe(df, forecast_runs, issue_times,
-                                   telemetry, f, AC_rating,
+                                   telemetry, f, max_power,
                                   runtime, metadata, aggregate_function)
   }
 
@@ -48,7 +48,7 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir){
 #' @param issue_times A list of timestamps, same length as forecast_runs
 #' @param telemetry Vector of telemetry
 #' @param df_idx Index of data frame row (likely index of site)
-#' @param AC_rating Site's AC rating
+#' @param max_power Site's AC rating or maximum load power
 #' @param runtime A value in seconds
 #' @param metadata A data.frame of forecast parameters
 #' @param aggregate_function A list of functions (mean or sum) for how to
@@ -56,7 +56,7 @@ export_metrics_to_csv <- function(out_dir, runtime_data_dir){
 #' @return data.frame df with a row added for this site
 #' @export
 add_metrics_to_dataframe <- function(df, forecast_runs, issue_times,
-                                     telemetry, df_idx, AC_rating,
+                                     telemetry, df_idx, max_power,
                                      runtime, metadata, aggregate_function) {
 
   df[df_idx, "Runtime [sec]"] <- runtime
@@ -98,13 +98,13 @@ get_metrics_for_single_run <- function(i, forecast_runs, issue_times, metadata, 
   stats <- forecasting::get_sundown_and_NaN_stats(forecast_runs[[i]], tel_test)
 
   qs <- forecasting::QS(forecast_runs[[i]], tel_test, quantiles)
-  crps_unweighted <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="none", quantiles=quantiles, qs=qs)/AC_rating
-  crps_tails <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="tails", quantiles=quantiles, qs=qs)/AC_rating
-  crps_left <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="left", quantiles=quantiles, qs=qs)/AC_rating
-  crps_right <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="right", quantiles=quantiles, qs=qs)/AC_rating
-  crps_center <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="center", quantiles=quantiles, qs=qs)/AC_rating
-  interval_width <- forecasting::sharpness_avg(forecast_runs[[i]], tel_test, alpha=.10, normalize.by=AC_rating)$mean
-  mae <- forecasting::MAE(forecast_runs[[i]], tel_test, normalize.by=AC_rating)
+  crps_unweighted <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="none", quantiles=quantiles, qs=qs)/max_power
+  crps_tails <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="tails", quantiles=quantiles, qs=qs)/max_power
+  crps_left <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="left", quantiles=quantiles, qs=qs)/max_power
+  crps_right <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="right", quantiles=quantiles, qs=qs)/max_power
+  crps_center <- forecasting::qwCRPS(forecast_runs[[i]], tel_test, weighting="center", quantiles=quantiles, qs=qs)/max_power
+  interval_width <- forecasting::sharpness_avg(forecast_runs[[i]], tel_test, alpha=.10, normalize.by=max_power)$mean
+  mae <- forecasting::MAE(forecast_runs[[i]], tel_test, normalize.by=max_power)
 
   results <- c(stats$`Sunup missing telemetry rate`, stats$`Validatable forecasts`,
                crps_unweighted, crps_tails, crps_left, crps_right, crps_center,
