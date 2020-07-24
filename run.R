@@ -44,6 +44,8 @@ library(lubridate)
 # lm_intercept -> Boolean. Whether to include a non-zero intercept in BMA linear regression or not (default)
 # telemetry_file -> Name of telemetry NetCDF file in the /data folder
 # ensemble_file -> Name of enemble forecast NetCDF file in the /data folder
+# maxpower_file -> Name of .csv file containing row of max power for all the sites (indexed by "site").
+#                  Could be a maximum load power or a PV plant or wind plant maximum AC rating, for normalization.
 # group_directory -> Desired output folder name, used to group results runs together. Defaults to unique UUID.
 
 defaults <- list(forecast_type="bma_sliding",
@@ -62,6 +64,7 @@ defaults <- list(forecast_type="bma_sliding",
                  lm_intercept = FALSE,
                  telemetry_file="telemetry.nc",
                  ensemble_file="fcst_members_powernew.nc",
+                 maxpower_file = "Site_max_power.csv",
                  group_directory=uuid::UUIDgenerate(TRUE)
 )
 
@@ -135,12 +138,12 @@ forecast_name <- switch(metadata$forecast_type,
                         stop("unknown forecast type"))
 
 # Directory and file locations
-data_dir <- here::here("data")
+data_dir <- here::here("Input data")
 main_dir <- here::here("Results")
 dir.create(main_dir, showWarnings = FALSE)
 out_dir_parent <- file.path(main_dir, forecast_name)
 dir.create(out_dir_parent, showWarnings = FALSE)
-AC_rating <- unlist(read.csv(file.path(data_dir, "Site_max_power.csv"), header=F))[site]
+max_power <- unlist(read.csv(file.path(data_dir, args$maxpower_file), header=F))[site]
 
 out_dir <- file.path(out_dir_parent, group_directory)
 dir.create(out_dir, showWarnings = FALSE)
@@ -159,7 +162,7 @@ tictoc::tic("Time-series data load-in")
 # Ensemble data: [issue x step x member]
 ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
                               site, metadata, date_training_start,
-                              AC_rating=AC_rating)
+                              max_power=max_power)
 
 # Load telemetry list, including data as data vector over time and a validtime vector
 telemetry <- get_telemetry_data(file.path(data_dir, tel_name), site,
@@ -197,7 +200,7 @@ tictoc::tic(paste("Total computation time for site ", site, sep=''))
 # Conduct forecast for each issue time (must sequence along or will return integer)
 for (i in seq_along(issue_times)){
   forecast_runs[[i]] <- forecast_by_issue_time(issue_times[i], ensemble, telemetry,
-                         sun_up, site, AC_rating, metadata, lm_formula)
+                         sun_up, site, max_power, metadata, lm_formula)
 }
 t_f <- tictoc::toc() # Forecast time
 runtime <- t_f$toc - t_f$tic
@@ -210,7 +213,7 @@ export_quantiles_to_h5(forecast_runs,
 
 # Save the run time data in R
 data_fname <- paste("data site ", site, ".RData", sep="")
-save(forecast_runs, issue_times, telemetry, ensemble, runtime, AC_rating, metadata,
+save(forecast_runs, issue_times, telemetry, ensemble, runtime, max_power, metadata,
      file=file.path(runtime_data_dir, data_fname))
 
 tictoc::toc()

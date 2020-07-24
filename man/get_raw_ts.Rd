@@ -4,7 +4,7 @@
 \alias{get_raw_ts}
 \title{Get time-series forecast of raw NWP ensemble}
 \usage{
-get_raw_ts(issue, ens_test, site, AC_rating, metadata)
+get_raw_ts(issue, ens_test, site, max_power, metadata)
 }
 \arguments{
 \item{issue}{A time stamp}
@@ -13,7 +13,7 @@ get_raw_ts(issue, ens_test, site, AC_rating, metadata)
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Site's AC power rating or maximum load}
 
 \item{metadata}{A data.frame of forecast parameters}
 }

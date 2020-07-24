@@ -4,7 +4,7 @@
 \alias{get_peen_ts}
 \title{Get time-series forecast using persistence ensemble (PeEn) method}
 \usage{
-get_peen_ts(issue, t_idx_series, telemetry, sun_up, site, AC_rating,
+get_peen_ts(issue, t_idx_series, telemetry, sun_up, site, max_power,
   metadata)
 }
 \arguments{
@@ -20,7 +20,7 @@ POSIXct times}
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Site's AC power rating or maximum load}
 
 \item{metadata}{A data.frame of forecast parameters}
 }

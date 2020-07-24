@@ -5,7 +5,7 @@
 \title{Get time-series forecast using BMA post-processing of NWP ensembles}
 \usage{
 get_bma_ts(issue, t_idx_series, ens_test, ensemble, telemetry, sun_up,
-  site, AC_rating, metadata, lm_formula)
+  site, max_power, metadata, lm_formula)
 }
 \arguments{
 \item{issue}{A time stamp}
@@ -26,7 +26,7 @@ POSIXct times}
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Site's AC power rating or maximum load}
 
 \item{metadata}{A data.frame of forecast parameters}
 

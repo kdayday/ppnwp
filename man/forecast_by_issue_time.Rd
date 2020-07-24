@@ -4,7 +4,7 @@
 \alias{forecast_by_issue_time}
 \title{Conduct site-level forecasting with the desired method}
 \usage{
-forecast_by_issue_time(issue, ensemble, telemetry, sun_up, site, AC_rating,
+forecast_by_issue_time(issue, ensemble, telemetry, sun_up, site, max_power,
   metadata, lm_formula)
 }
 \arguments{
@@ -21,7 +21,7 @@ POSIXct times}
 
 \item{site}{String, site name}
 
-\item{AC_rating}{Site's AC power rating}
+\item{max_power}{Maximum load or site's AC power rating}
 
 \item{metadata}{A data.frame of forecast parameters}
 

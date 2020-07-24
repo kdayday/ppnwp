@@ -6,7 +6,7 @@
 \usage{
 get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times,
   vname = "powernew", truncate = T,
-  date_data_start = lubridate::ymd(20160101), AC_rating = NULL)
+  date_data_start = lubridate::ymd(20160101), max_power = NULL)
 }
 \arguments{
 \item{nc}{An open NetCDF object}
@@ -27,7 +27,7 @@ maximum power}
 
 \item{date_data_start}{A lubridate: Date of first day in file}
 
-\item{AC_rating}{AC power rating}
+\item{max_power}{AC power rating or maximum load power}
 }
 \description{
 Loads in ensemble forecast data into the form: [issue x step x member]

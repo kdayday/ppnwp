@@ -40,10 +40,10 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
     # Is this Maxar's format?
     if (nc$ndims==5 && all(names(nc$dim)==c("lon",  "lat",  "lev",  "time", "ens" ))){
       data <- get_maxar_ensemble(nc, members, site, metadata, ensemble_issue_times, ...)
-      # Is this load data?
+    # Is this load data?
     } else if (nc$ndims==3 && all(names(nc$dim)==c("issue",  "step", "member"))){
       data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
-      # Is this very short-term solar data?
+    # Is this very short-term solar data?
     } else if (nc$ndims==6 && all(names(nc$dim)==c("site", "lon", "lat",  "lev",  "time", "ens"))){
       data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
     } else stop("Unrecognized forecast file format; ECMWF format not implemented")
@@ -72,15 +72,15 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 #' @param truncate Boolean: Whether or not to truncate the forecasts at the site
 #'   maximum power
 #' @param date_data_start A lubridate: Date of first day in file
-#' @param AC_rating AC power rating
+#' @param max_power AC power rating or maximum load power
 get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times,
                            vname="powernew", truncate=T,
                            date_data_start=lubridate::ymd(20160101),
-                           AC_rating=NULL) {
+                           max_power=NULL) {
 
   check_maxar_parameters(nc, metadata, site)
 
-  if (truncate & is.null(AC_rating)) stop("Site maximum power required to truncate forecasts.")
+  if (truncate & is.null(max_power)) stop("Site maximum power required to truncate forecasts.")
 
   start_day <- get_start_day(date_data_start, ensemble_issue_times[[1]])
 
@@ -100,7 +100,7 @@ get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times
     # (time is rolling along day, hour)
     data <- sapply(members, FUN = member_data, simplify ="array")
     if (truncate) {
-      data[which(data > AC_rating)] <- AC_rating
+      data[which(data > max_power)] <- max_power
     }
 
     # Reformat to [issue x step x member] format, but use

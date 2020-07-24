@@ -5,11 +5,11 @@
 #' @param issue A time stamp
 #' @param ens_test [time x member] matrix of ensemble data
 #' @param site String, site name
-#' @param AC_rating Site's AC power rating
+#' @param max_power Site's AC power rating or maximum load
 #' @param metadata A data.frame of forecast parameters
 #' @return A ts_forecast object
 #' @export
-get_binned_ts <- function(issue, ens_test, site, AC_rating, metadata){
+get_binned_ts <- function(issue, ens_test, site, max_power, metadata){
 
   # No Training
 
@@ -18,7 +18,7 @@ get_binned_ts <- function(issue, ens_test, site, AC_rating, metadata){
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'binned',
-                    max_power=AC_rating)
+                    max_power=max_power)
   return(ts)
 }
 
