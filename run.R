@@ -138,7 +138,7 @@ forecast_name <- switch(metadata$forecast_type,
                         stop("unknown forecast type"))
 
 # Directory and file locations
-data_dir <- here::here("data")
+data_dir <- here::here("Input data")
 main_dir <- here::here("Results")
 dir.create(main_dir, showWarnings = FALSE)
 out_dir_parent <- file.path(main_dir, forecast_name)
