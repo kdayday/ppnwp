@@ -174,7 +174,7 @@ tictoc::tic("Time-series data load-in")
 # Ensemble data: [issue x step x member]
 ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
                               site, metadata, date_training_start,
-                              max_power=max_power)
+                              max_power=max_power, data_dir=data_dir)
 
 # Load telemetry list, including data as data vector over time and a validtime vector
 telemetry <- get_telemetry_data(file.path(data_dir, tel_name), site,

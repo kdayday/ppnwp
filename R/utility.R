@@ -48,7 +48,7 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
       data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
     # Is this hourly solar data post-processed from PVW?
     } else if (nc$ndims==4 && all(names(nc$dim)==c("site", "issue",  "step", "member"))){
-      data <- get_hourly_pvw_ensemble(nc, site, date_start, metadata)
+      data <- get_hourly_pvw_ensemble(nc, site, date_start, metadata, ...)
     } else stop("Unrecognized forecast file format.")
   },  finally = {
     # Close the file!
@@ -79,7 +79,7 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times,
                            vname="powernew", truncate=T,
                            date_data_start=lubridate::ymd(20160101),
-                           max_power=NULL) {
+                           max_power=NULL, ...) {
 
   check_maxar_parameters(nc, metadata, site)
 
@@ -206,8 +206,8 @@ check_maxar_parameters <- function(nc, metadata, site) {
 #'   time-steps per day, rolling or not, etc.
 #' @param vname NetCDF variable name
 #' @param date_data_start A lubridate: Date of first day in file, already in UTC
-get_hourly_pvw_ensemble <- function(nc, site, date_start, metadata,
-                               vname="power", date_data_start=lubridate::ymd_h("20170101_12")) {
+get_hourly_pvw_ensemble <- function(nc, site, date_start, metadata, data_dir,
+                               vname="power", date_data_start=lubridate::ymd_h("20170101_12"), ...) {
 
   if (metadata$lead_time != 12 | metadata$resolution !=1 | metadata$update_rate!= 24) stop("Requested temporal parameters do not match hourly PVW file format.")
 
@@ -219,7 +219,15 @@ get_hourly_pvw_ensemble <- function(nc, site, date_start, metadata,
   dim_starts <- c(site, issue_start, 1, 1)
   dim_counts <- c(1, ndays, metadata$horizon, -1)
 
-  return(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts))
+  data <- ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts)
+
+  mask <- read.csv(file.path(data_dir, "hourly_missing_members.csv"))
+  # Switch members to NA instead of 0 once their horizon runs out
+  for (i in seq_len(dim(data)[3])) {
+    if (mask[i,]!=Inf) data[, mask[i,]:ncol(data), i] <- NA
+  }
+
+  return(data)
 }
 
 
