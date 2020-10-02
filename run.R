@@ -65,7 +65,8 @@ defaults <- list(forecast_type="bma_sliding",
                  telemetry_file="telemetry.nc",
                  ensemble_file="fcst_members_powernew.nc",
                  maxpower_file = "Site_max_power.csv",
-                 group_directory=uuid::UUIDgenerate(TRUE)
+                 group_directory=uuid::UUIDgenerate(TRUE),
+                 save_R = TRUE
 )
 
 # Vector arguments should be strings "1,2,3" and will be post-processed to vectors
@@ -92,6 +93,7 @@ if (args$lm_intercept) {
 ens_name <- args$ensemble_file
 tel_name <- args$telemetry_file
 group_directory <- args$group_directory
+save_R <- args$save_R
 
 # ------------------------------------------------------
 # Calculate remaining temporal constants
@@ -148,8 +150,10 @@ max_power <- unlist(read.csv(file.path(data_dir, args$maxpower_file), header=F))
 out_dir <- file.path(out_dir_parent, group_directory)
 dir.create(out_dir, showWarnings = FALSE)
 
-runtime_data_dir <- file.path(out_dir, "Runtime data")
-dir.create(runtime_data_dir, showWarnings = FALSE)
+if (save_R) {
+  runtime_data_dir <- file.path(out_dir, "Runtime data")
+  dir.create(runtime_data_dir, showWarnings = FALSE)
+}
 
 quantile_data_dir <- file.path(out_dir, "Quantile data")
 dir.create(quantile_data_dir, showWarnings = FALSE)
@@ -212,8 +216,10 @@ export_quantiles_to_h5(forecast_runs,
                       fname=file.path(quantile_data_dir, paste("quantiles site ", site, ".h5", sep="")))
 
 # Save the run time data in R
-data_fname <- paste("data site ", site, ".RData", sep="")
-save(forecast_runs, issue_times, telemetry, ensemble, runtime, max_power, metadata,
-     file=file.path(runtime_data_dir, data_fname))
+if (save_R) {
+  data_fname <- paste("data site ", site, ".RData", sep="")
+  save(forecast_runs, issue_times, telemetry, ensemble, runtime, max_power, metadata,
+       file=file.path(runtime_data_dir, data_fname))
+}
 
 tictoc::toc()
