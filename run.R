@@ -153,7 +153,6 @@ main_dir <- here::here("Results")
 dir.create(main_dir, showWarnings = FALSE)
 out_dir_parent <- file.path(main_dir, forecast_name)
 dir.create(out_dir_parent, showWarnings = FALSE)
-max_power <- unlist(read.csv(file.path(data_dir, args$maxpower_file), header=F))[site]
 
 out_dir <- file.path(out_dir_parent, group_directory)
 dir.create(out_dir, showWarnings = FALSE)
@@ -170,6 +169,8 @@ dir.create(quantile_data_dir, showWarnings = FALSE)
 # Time-series data load in
 # ----------------------------------------------------------------------
 tictoc::tic("Time-series data load-in")
+
+max_power <- unlist(read.csv(file.path(data_dir, args$maxpower_file), header=F))[site]
 
 # Ensemble data: [issue x step x member]
 ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
