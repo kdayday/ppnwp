@@ -29,10 +29,12 @@ library(lubridate)
 # members -> List of ensemble member indices to include.
 # site -> Power plant site index.
 # percent_clipping_threshold -> % of power plant rating to use as clipping threshold, (0,1)
-# date_first_issue -> First forecast issue time (ymd_h). For the rolling forecast, this equals the
-#                     start of the benchmark. Training data will be selected backwards from there.
-# date_last_valid -> Last valid time to include in the benchmark (ymd_h). The first valid time and last
-#                     issue time are backcalculated from date_first_issue, date_last_valid, and the temporal parameters.
+# date_first_issue -> First forecast issue time (ymd_h) in the time zone of interest. No time zone handling is included.
+#                     For the rolling forecast, this equals the start of the benchmark.
+#                     Training data will be selected backwards from there.
+# date_last_valid -> Last valid time to include in the benchmark (ymd_h) in the time zone of interest.
+#                     The first valid time and last issue time are backcalculated from date_first_issue,
+#                     date_last_valid, and the temporal parameters.
 # training_window -> If a sliding window is used, the training window is a sliding windows in *hours*.
 #                 -> If a time-of-day window is used, the appropriate hour will be cherry picked from
 #                     this number of *days* this year,
