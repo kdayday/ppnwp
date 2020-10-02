@@ -81,7 +81,12 @@ metadata$resolution <- args$resolution
 metadata$horizon <- args$horizon
 metadata$is_rolling <- args$is_rolling
 metadata$update_rate <- args$update_rate
-members <- as.numeric(unlist(strsplit(args$members, ",")))
+if (grepl(",", args$members)) {
+  members <- as.numeric(unlist(strsplit(args$members, ",")))
+} else if (grepl(":", args$members)) {
+  mem_params <- as.numeric(unlist(strsplit(args$members, ":")))
+  members <- mem_params[1]:mem_params[2]
+} else members <- as.numeric(args$members)
 site <- args$site
 metadata$percent_clipping_threshold <- args$percent_clipping_threshold
 metadata$date_first_issue <- as.POSIXlt(lubridate::ymd_h(args$date_first_issue))
