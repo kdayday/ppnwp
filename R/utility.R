@@ -46,7 +46,10 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
     # Is this very short-term solar data?
     } else if (nc$ndims==6 && all(names(nc$dim)==c("site", "lon", "lat",  "lev",  "time", "ens"))){
       data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
-    } else stop("Unrecognized forecast file format; ECMWF format not implemented")
+    # Is this hourly solar data post-processed from PVW?
+    } else if (nc$ndims==4 && all(names(nc$dim)==c("site", "issue",  "step", "member"))){
+      data <- get_hourly_pvw_ensemble(nc, site, date_start, metadata)
+    } else stop("Unrecognized forecast file format.")
   },  finally = {
     # Close the file!
     ncdf4::nc_close(nc)
@@ -188,6 +191,37 @@ check_maxar_parameters <- function(nc, metadata, site) {
   }
   if (!(site %in% nc$dim[[3]]$vals)) stop("Site index not valid")
 }
+
+#' Subfunction to load in hourly PVW forecasts
+#'
+#' Loads in ensemble forecast data into the form: [issue x step x member]
+#' Assumes a NETCDF file of the dimensions: [site x issue x step x member]
+#' Loads in all members by default
+#' @param nc An open NetCDF object
+#' @param site Site index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param date_start Timestamp
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param vname NetCDF variable name
+#' @param date_data_start A lubridate: Date of first day in file, already in UTC
+get_hourly_pvw_ensemble <- function(nc, site, date_start, metadata,
+                               vname="power", date_data_start=lubridate::ymd_h("20170101_12")) {
+
+  if (metadata$lead_time != 12 | metadata$resolution !=1 | metadata$update_rate!= 24) stop("Requested temporal parameters do not match hourly PVW file format.")
+
+  # get_ndays works here because the update rate is 24 hours (1 day); doesn't work in general
+  issue_start <- get_ndays(date_data_start, date_start)
+
+  ndays <- get_ndays(date_start, metadata$date_last_valid)
+
+  dim_starts <- c(site, issue_start, 1, 1)
+  dim_counts <- c(1, ndays, metadata$horizon, -1)
+
+  return(ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts))
+}
+
 
 #' Get a vector of telemetry data
 #'
