@@ -169,11 +169,6 @@ get_maxar_data_by_issue <- function(member, data_rectangle,
                 member=member, simplify="array"))
 }
 
-get_ecmwf_data <- function() {
-  # TODO Megan to implement
-  stop("Not implemented")
-}
-
 #' Subfunction to error-check temporal parameters for Maxar load-in
 #'
 #' @param nc An open NetCDF object
@@ -300,7 +295,7 @@ get_load_telemetry <- function(nc, site, metadata, date_start,
 #' @return Number of days in requested data sequence
 #' @export
 get_ndays <- function(date_start,date_end) {
-  floor(lubridate::interval(date_start, date_end)/days(1) + 1)
+  floor(lubridate::interval(date_start, date_end)/lubridate::days(1) + 1)
 }
 
 #' Calculate start day's index since the beginning of data availability
@@ -309,7 +304,7 @@ get_ndays <- function(date_start,date_end) {
 #' @return Index number of first requested day
 #' @export
 get_start_day <- function(date_data_start, date_start){
-  floor(lubridate::interval(date_data_start, date_start)/days(1) + 1)
+  floor(lubridate::interval(date_data_start, date_start)/lubridate::days(1) + 1)
 }
 
 #' Translate telemetry valid time to ensemble issue/step indices
