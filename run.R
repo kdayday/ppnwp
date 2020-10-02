@@ -65,6 +65,7 @@ defaults <- list(forecast_type="bma_sliding",
                  telemetry_file="telemetry.nc",
                  ensemble_file="fcst_members_powernew.nc",
                  maxpower_file = "Site_max_power.csv",
+                 sitename_file = "meta_sorted.csv", #NA, #meta_sorted.csv
                  group_directory=uuid::UUIDgenerate(TRUE),
                  save_R = TRUE
 )
@@ -217,8 +218,11 @@ runtime <- t_f$toc - t_f$tic
 # Begin by saving metadata to file separately
 write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
 
+if (!is.na(args$sitename_file)) {
+  sitename <- as.character(read.csv(file.path(data_dir, args$sitename_file), header=T)[["site_ids"]][site])
+} else sitename <- site
 export_quantiles_to_h5(forecast_runs,
-                      fname=file.path(quantile_data_dir, paste("quantiles site ", site, ".h5", sep="")))
+                      fname=file.path(quantile_data_dir, paste(sitename, ".h5", sep="")))
 
 # Save the run time data in R
 if (save_R) {
