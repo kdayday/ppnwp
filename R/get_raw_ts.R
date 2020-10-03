@@ -18,7 +18,8 @@ get_raw_ts <- function(issue, ens_test, site, max_power, metadata){
                     time_step=metadata$resolution, scale='site',
                     location=site,
                     method = 'empirical',
-                    max_power=max_power)
+                    max_power=max_power,
+                    quantiles=seq(0.01, 0.99, by=0.01))
   return(ts)
 }
 

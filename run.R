@@ -29,10 +29,12 @@ library(lubridate)
 # members -> List of ensemble member indices to include.
 # site -> Power plant site index.
 # percent_clipping_threshold -> % of power plant rating to use as clipping threshold, (0,1)
-# date_first_issue -> First forecast issue time (ymd_h). For the rolling forecast, this equals the
-#                     start of the benchmark. Training data will be selected backwards from there.
-# date_last_valid -> Last valid time to include in the benchmark (ymd_h). The first valid time and last
-#                     issue time are backcalculated from date_first_issue, date_last_valid, and the temporal parameters.
+# date_first_issue -> First forecast issue time (ymd_h) in the time zone of interest. No time zone handling is included.
+#                     For the rolling forecast, this equals the start of the benchmark.
+#                     Training data will be selected backwards from there.
+# date_last_valid -> Last valid time to include in the benchmark (ymd_h) in the time zone of interest.
+#                     The first valid time and last issue time are backcalculated from date_first_issue,
+#                     date_last_valid, and the temporal parameters.
 # training_window -> If a sliding window is used, the training window is a sliding windows in *hours*.
 #                 -> If a time-of-day window is used, the appropriate hour will be cherry picked from
 #                     this number of *days* this year,
@@ -65,7 +67,9 @@ defaults <- list(forecast_type="bma_sliding",
                  telemetry_file="telemetry.nc",
                  ensemble_file="fcst_members_powernew.nc",
                  maxpower_file = "Site_max_power.csv",
-                 group_directory=uuid::UUIDgenerate(TRUE)
+                 sitename_file = "meta_sorted.csv", #NA, #meta_sorted.csv
+                 group_directory=uuid::UUIDgenerate(TRUE),
+                 save_R = TRUE
 )
 
 # Vector arguments should be strings "1,2,3" and will be post-processed to vectors
@@ -80,7 +84,12 @@ metadata$resolution <- args$resolution
 metadata$horizon <- args$horizon
 metadata$is_rolling <- args$is_rolling
 metadata$update_rate <- args$update_rate
-members <- as.numeric(unlist(strsplit(args$members, ",")))
+if (grepl(",", args$members)) {
+  members <- as.numeric(unlist(strsplit(args$members, ",")))
+} else if (grepl(":", args$members)) {
+  mem_params <- as.numeric(unlist(strsplit(args$members, ":")))
+  members <- mem_params[1]:mem_params[2]
+} else members <- as.numeric(args$members)
 site <- args$site
 metadata$percent_clipping_threshold <- args$percent_clipping_threshold
 metadata$date_first_issue <- as.POSIXlt(lubridate::ymd_h(args$date_first_issue))
@@ -92,6 +101,7 @@ if (args$lm_intercept) {
 ens_name <- args$ensemble_file
 tel_name <- args$telemetry_file
 group_directory <- args$group_directory
+save_R <- args$save_R
 
 # ------------------------------------------------------
 # Calculate remaining temporal constants
@@ -143,13 +153,14 @@ main_dir <- here::here("Results")
 dir.create(main_dir, showWarnings = FALSE)
 out_dir_parent <- file.path(main_dir, forecast_name)
 dir.create(out_dir_parent, showWarnings = FALSE)
-max_power <- unlist(read.csv(file.path(data_dir, args$maxpower_file), header=F))[site]
 
 out_dir <- file.path(out_dir_parent, group_directory)
 dir.create(out_dir, showWarnings = FALSE)
 
-runtime_data_dir <- file.path(out_dir, "Runtime data")
-dir.create(runtime_data_dir, showWarnings = FALSE)
+if (save_R) {
+  runtime_data_dir <- file.path(out_dir, "Runtime data")
+  dir.create(runtime_data_dir, showWarnings = FALSE)
+}
 
 quantile_data_dir <- file.path(out_dir, "Quantile data")
 dir.create(quantile_data_dir, showWarnings = FALSE)
@@ -159,10 +170,12 @@ dir.create(quantile_data_dir, showWarnings = FALSE)
 # ----------------------------------------------------------------------
 tictoc::tic("Time-series data load-in")
 
+max_power <- unlist(read.csv(file.path(data_dir, args$maxpower_file), header=F))[site]
+
 # Ensemble data: [issue x step x member]
 ensemble <- get_forecast_data(file.path(data_dir, ens_name), members,
                               site, metadata, date_training_start,
-                              max_power=max_power)
+                              max_power=max_power, data_dir=data_dir)
 
 # Load telemetry list, including data as data vector over time and a validtime vector
 telemetry <- get_telemetry_data(file.path(data_dir, tel_name), site,
@@ -208,12 +221,17 @@ runtime <- t_f$toc - t_f$tic
 # Begin by saving metadata to file separately
 write.csv(metadata, file=file.path(out_dir, "metadata.csv"))
 
+if (!is.na(args$sitename_file)) {
+  sitename <- as.character(read.csv(file.path(data_dir, args$sitename_file), header=T)[["site_ids"]][site])
+} else sitename <- site
 export_quantiles_to_h5(forecast_runs,
-                      fname=file.path(quantile_data_dir, paste("quantiles site ", site, ".h5", sep="")))
+                      fname=file.path(quantile_data_dir, paste(sitename, ".h5", sep="")))
 
 # Save the run time data in R
-data_fname <- paste("data site ", site, ".RData", sep="")
-save(forecast_runs, issue_times, telemetry, ensemble, runtime, max_power, metadata,
-     file=file.path(runtime_data_dir, data_fname))
+if (save_R) {
+  data_fname <- paste("data site ", site, ".RData", sep="")
+  save(forecast_runs, issue_times, telemetry, ensemble, runtime, max_power, metadata,
+       file=file.path(runtime_data_dir, data_fname))
+}
 
 tictoc::toc()

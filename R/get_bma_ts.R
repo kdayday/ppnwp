@@ -38,7 +38,8 @@ get_bma_ts <- function(issue, t_idx_series, ens_test, ensemble, telemetry, sun_u
                     location=site,
                     method = 'bma', MoreTSArgs = list(model=models),
                     max_power=max_power,
-                    bma_distribution=metadata$bma_distribution)
+                    bma_distribution=metadata$bma_distribution,
+                    quantiles=seq(0.01, 0.99, by=0.01))
   return(ts)
 }
 

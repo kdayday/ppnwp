@@ -46,7 +46,10 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
     # Is this very short-term solar data?
     } else if (nc$ndims==6 && all(names(nc$dim)==c("site", "lon", "lat",  "lev",  "time", "ens"))){
       data <- ncdf4::ncvar_get(nc, attributes(nc$var)$names)
-    } else stop("Unrecognized forecast file format; ECMWF format not implemented")
+    # Is this hourly solar data post-processed from PVW?
+    } else if (nc$ndims==4 && all(names(nc$dim)==c("site", "issue",  "step", "member"))){
+      data <- get_hourly_pvw_ensemble(nc, site, date_start, metadata, ...)
+    } else stop("Unrecognized forecast file format.")
   },  finally = {
     # Close the file!
     ncdf4::nc_close(nc)
@@ -76,7 +79,7 @@ get_forecast_data <- function(fname, members, site, metadata, date_start, ...) {
 get_maxar_ensemble <- function(nc, members, site, metadata, ensemble_issue_times,
                            vname="powernew", truncate=T,
                            date_data_start=lubridate::ymd(20160101),
-                           max_power=NULL) {
+                           max_power=NULL, ...) {
 
   check_maxar_parameters(nc, metadata, site)
 
@@ -169,11 +172,6 @@ get_maxar_data_by_issue <- function(member, data_rectangle,
                 member=member, simplify="array"))
 }
 
-get_ecmwf_data <- function() {
-  # TODO Megan to implement
-  stop("Not implemented")
-}
-
 #' Subfunction to error-check temporal parameters for Maxar load-in
 #'
 #' @param nc An open NetCDF object
@@ -193,6 +191,45 @@ check_maxar_parameters <- function(nc, metadata, site) {
   }
   if (!(site %in% nc$dim[[3]]$vals)) stop("Site index not valid")
 }
+
+#' Subfunction to load in hourly PVW forecasts
+#'
+#' Loads in ensemble forecast data into the form: [issue x step x member]
+#' Assumes a NETCDF file of the dimensions: [site x issue x step x member]
+#' Loads in all members by default
+#' @param nc An open NetCDF object
+#' @param site Site index
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param date_start Timestamp
+#' @param metadata Metadata list including date end, temporal parameters,
+#'   time-steps per day, rolling or not, etc.
+#' @param vname NetCDF variable name
+#' @param date_data_start A lubridate: Date of first day in file, already in UTC
+get_hourly_pvw_ensemble <- function(nc, site, date_start, metadata, data_dir,
+                               vname="power", date_data_start=lubridate::ymd_h("20170101_12"), ...) {
+
+  if (metadata$lead_time != 12 | metadata$resolution !=1 | metadata$update_rate!= 24) stop("Requested temporal parameters do not match hourly PVW file format.")
+
+  # get_ndays works here because the update rate is 24 hours (1 day); doesn't work in general
+  issue_start <- get_ndays(date_data_start, date_start)
+
+  ndays <- get_ndays(date_start, metadata$date_last_valid)
+
+  dim_starts <- c(site, issue_start, 1, 1)
+  dim_counts <- c(1, ndays, metadata$horizon, -1)
+
+  data <- ncdf4::ncvar_get(nc, varid=vname, start=dim_starts, count=dim_counts)
+
+  mask <- read.csv(file.path(data_dir, "hourly_missing_members.csv"))
+  # Switch members to NA instead of 0 once their horizon runs out
+  for (i in seq_len(dim(data)[3])) {
+    if (mask[i,]!=Inf) data[, mask[i,]:ncol(data), i] <- NA
+  }
+
+  return(data)
+}
+
 
 #' Get a vector of telemetry data
 #'
@@ -300,7 +337,7 @@ get_load_telemetry <- function(nc, site, metadata, date_start,
 #' @return Number of days in requested data sequence
 #' @export
 get_ndays <- function(date_start,date_end) {
-  floor(lubridate::interval(date_start, date_end)/days(1) + 1)
+  floor(lubridate::interval(date_start, date_end)/lubridate::days(1) + 1)
 }
 
 #' Calculate start day's index since the beginning of data availability
@@ -309,7 +346,7 @@ get_ndays <- function(date_start,date_end) {
 #' @return Index number of first requested day
 #' @export
 get_start_day <- function(date_data_start, date_start){
-  floor(lubridate::interval(date_data_start, date_start)/days(1) + 1)
+  floor(lubridate::interval(date_data_start, date_start)/lubridate::days(1) + 1)
 }
 
 #' Translate telemetry valid time to ensemble issue/step indices

@@ -29,7 +29,8 @@ get_emos_ts <- function(issue, t_idx_series, ens_test, ensemble, telemetry, sun_
   ts <- forecasting::ts_forecast(ens_test, issue + lubridate::hours(ifelse(metadata$is_rolling, 0, metadata$lead_time)),
                                  time_step=metadata$resolution, scale='site',
                                  location=site, method = 'emos',
-                                 MoreTSArgs = list(model=models), max_power=max_power)
+                                 MoreTSArgs = list(model=models), max_power=max_power,
+                                 quantiles=seq(0.01, 0.99, by=0.01))
   return(ts)
 }
 
